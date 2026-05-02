@@ -1,0 +1,57 @@
+name: cinema_eats_customer
+description: "Cinema Food Ordering App"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+
+  # State Management
+  flutter_riverpod: ^2.4.0
+  riverpod_annotation: ^2.3.0
+
+  # Navigation
+  go_router: ^12.1.0
+
+  # UI & Animation
+  lottie: ^2.7.0
+  cached_network_image: ^3.3.0
+  shimmer: ^3.0.0
+  flutter_animate: ^4.3.0
+  carousel_slider: ^5.0.0
+
+  # Local Storage
+  shared_preferences: ^2.2.0
+
+  # Networking
+  dio: ^5.4.0
+  http: ^1.2.0
+
+  # Utilities
+  intl: ^0.18.0
+  uuid: ^4.2.0
+  equatable: ^2.0.5
+  supabase_flutter: ^2.5.6
+
+  # Fonts
+  google_fonts: ^6.1.0
+  flutter_svg: ^2.0.9
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.7
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/lottie/
+    - assets/icons/

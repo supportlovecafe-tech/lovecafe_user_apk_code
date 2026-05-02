@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Cinema Eats Customer (Mobile/Web)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_customer.dart",
+      "args": [
+        "--dart-define=SUPABASE_URL=https://pwbvoosqunrvqewokynz.supabase.co",
+        "--dart-define=SUPABASE_ANON_KEY=sb_publishable_hiVcMsabjEaUOUOE1GNqQA_y30oYC8b"
+      ]
+    },
+    {
+      "name": "Cinema Eats (Standard)",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main.dart",
+      "args": [
+        "--dart-define=SUPABASE_URL=https://pwbvoosqunrvqewokynz.supabase.co",
+        "--dart-define=SUPABASE_ANON_KEY=sb_publishable_hiVcMsabjEaUOUOE1GNqQA_y30oYC8b"
+      ]
+    }
+  ]
+}

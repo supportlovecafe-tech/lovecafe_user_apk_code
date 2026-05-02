@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CinemaEats - Luxury Movie Dining</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Epilogue:wght@400;700;900&amp;family=Raleway:wght@700&amp;family=DM+Sans:wght@400;500&amp;family=Space+Grotesk:wght@500;700&amp;family=Playfair+Display:ital,wght@0,800;1,800&amp;family=Manrope:wght@400;500;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                "on-secondary-fixed": "#291800",
+                "inverse-primary": "#c0001d",
+                "on-primary-fixed-variant": "#930014",
+                "on-tertiary-fixed-variant": "#005049",
+                "inverse-on-surface": "#2d3137",
+                "primary-fixed": "#ffdad7",
+                "on-surface-variant": "#e7bcb9",
+                "tertiary": "#00C2B2",
+                "on-background": "#dfe2eb",
+                "on-primary-container": "#fffeff",
+                "on-secondary-fixed-variant": "#633f00",
+                "on-primary-fixed": "#410004",
+                "on-surface": "#dfe2eb",
+                "surface-tint": "#ffb3ae",
+                "error-container": "#93000a",
+                "surface-dim": "#10141a",
+                "surface-bright": "#353940",
+                "outline": "#ae8784",
+                "tertiary-container": "#00857a",
+                "background": "#0D1117",
+                "secondary-fixed": "#ffddb4",
+                "on-primary": "#68000b",
+                "secondary": "#F5A623",
+                "surface-container-highest": "#1F2937",
+                "primary-container": "#E8192C",
+                "surface-container-low": "#181c22",
+                "surface-variant": "#31353c",
+                "surface-container-lowest": "#0D1117",
+                "on-error": "#690005",
+                "on-secondary-container": "#4f3100",
+                "surface-container-high": "#262a31",
+                "inverse-surface": "#dfe2eb",
+                "primary-fixed-dim": "#ffb3ae",
+                "tertiary-fixed": "#65f9e7",
+                "tertiary-fixed-dim": "#40dccb",
+                "on-tertiary-fixed": "#00201d",
+                "on-tertiary": "#003732",
+                "on-tertiary-container": "#ffffff",
+                "secondary-fixed-dim": "#F5A623",
+                "primary": "#E8192C",
+                "error": "#ffb4ab",
+                "secondary-container": "#dc9100",
+                "outline-variant": "#5d3f3d",
+                "surface-container": "#161B22",
+                "on-secondary": "#452b00",
+                "surface": "#0D1117",
+                "on-error-container": "#ffdad6"
+              },
+              "fontFamily": {
+                "headline": ["Raleway", "sans-serif"],
+                "display": ["Playfair Display", "serif"],
+                "body": ["Manrope", "sans-serif"],
+                "label": ["Space Grotesk", "monospace"]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .red-glow { box-shadow: 0 8px 32px rgba(232, 25, 44, 0.4); }
+        .gold-glow { text-shadow: 0 0 12px rgba(245, 166, 35, 0.4); }
+        .glass-panel { background: rgba(22, 27, 34, 0.7); backdrop-filter: blur(20px); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface-container-lowest text-on-surface font-body min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="bg-[#0D1117] backdrop-blur-xl bg-opacity-80 docked full-width top-0 sticky z-50 shadow-[0_8px_32px_rgba(232,25,44,0.15)] flex justify-between items-center w-full px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-primary scale-95 active:scale-90 transition-transform cursor-pointer">
+<img class="w-full h-full object-cover" data-alt="close up portrait of a sophisticated man in a dark suit with dramatic cinematic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDr-e24baTHQA0ca0VUhiQJZCH0eiyurJnzyp4qobn5srv5YtxermyLrLAjs303Z09G8XHFLlopxUIma8aX3YZLoH2-NwnDBUi_1N5MwhfpecI35z7us4qmxzXG78SfoHK_7C1cOyVpjAsaI-bl6Jj0VfNP5RFSAUBNXwcMU1aTOR-Vn_09U8VBLAOpz-Qxl81-w5HUIsXUQKDjBh04E61JfK350HyegIcz41nQbdkJ-TeTKP-jWWfOnwRwnapH3LvUouAkPKoa83Y"/>
+</div>
+<h1 class="font-['Epilogue'] tracking-tight text-2xl font-black text-[#E8192C] italic">CinemaEats</h1>
+</div>
+<div class="flex items-center gap-5">
+<button class="text-gray-400 hover:text-[#F5A623] transition-colors duration-300 scale-95 active:scale-90 transition-transform relative">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-0 right-0 w-2 h-2 bg-primary rounded-full"></span>
+</button>
+<button class="text-gray-400 hover:text-[#F5A623] transition-colors duration-300 scale-95 active:scale-90 transition-transform">
+<span class="material-symbols-outlined">shopping_cart</span>
+</button>
+</div>
+</header>
+<main class="max-w-md mx-auto">
+<!-- Location Chip -->
+<section class="px-6 py-4">
+<div class="inline-flex items-center gap-2 px-4 py-2 bg-surface-container-highest rounded-full border border-outline-variant/20">
+<span class="material-symbols-outlined text-tertiary text-sm" style="font-variation-settings: 'FILL' 1;">location_on</span>
+<span class="font-label text-xs uppercase tracking-widest text-on-surface">Hall 2 · Screen 3 · Seat F9</span>
+</div>
+</section>
+<!-- Hero Carousel -->
+<section class="w-full h-[240px] relative overflow-hidden mb-8">
+<div class="absolute inset-0">
+<img class="w-full h-full object-cover" data-alt="extreme close up of a gourmet double wagyu beef burger with melting cheese and artisan bun on dark background with warm rim lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMiNFrIggC4MsNMWDTupjFqZ-ddbxeebr9727Dn1i2hSOzb74KIwnIsesPqVjn0B5pJosZucoDQ_IlzI7-XtoySbOj3kjdtDkXIX4xW257eA8CD5iJISLQe1uzB10p8o6DPpcbNPuS3fVAHMFgnu0nUTD0tzKTLuvcvigsft4J7cXkbdVfaG1t8yk89Ix93iLU72ZbBzuCtqvCo6CK2Rnt-cN13AeuDPyEJ_V7xAEHW3uWeBxF6Tr1LbJ3TmUklKXCMAzXNYj_9FI"/>
+<div class="absolute inset-0 bg-gradient-to-t from-surface-container-lowest via-transparent to-transparent"></div>
+</div>
+<div class="absolute bottom-6 left-6 right-6 flex flex-col gap-2">
+<span class="bg-primary text-white text-[10px] font-black uppercase tracking-tighter px-3 py-1 rounded w-fit red-glow">Combo Mania</span>
+<h2 class="font-display text-3xl italic text-white leading-none">The Director's Cut Burger</h2>
+<p class="text-on-surface-variant text-sm font-medium">Double Wagyu, Truffle Aioli, Brioche.</p>
+</div>
+<!-- Carousel Dots -->
+<div class="absolute bottom-6 right-6 flex gap-1.5">
+<div class="w-6 h-1 rounded-full bg-primary"></div>
+<div class="w-2 h-1 rounded-full bg-white/30"></div>
+<div class="w-2 h-1 rounded-full bg-white/30"></div>
+</div>
+</section>
+<!-- Category Row -->
+<section class="mb-10">
+<div class="flex overflow-x-auto gap-3 px-6 hide-scrollbar">
+<button class="flex-shrink-0 px-6 py-2.5 rounded-xl bg-primary text-white font-bold text-sm red-glow">Burgers</button>
+<button class="flex-shrink-0 px-6 py-2.5 rounded-xl bg-surface-container-high text-on-surface-variant font-bold text-sm hover:text-white transition-colors">Snacks</button>
+<button class="flex-shrink-0 px-6 py-2.5 rounded-xl bg-surface-container-high text-on-surface-variant font-bold text-sm hover:text-white transition-colors">Drinks</button>
+<button class="flex-shrink-0 px-6 py-2.5 rounded-xl bg-surface-container-high text-on-surface-variant font-bold text-sm hover:text-white transition-colors">Combos</button>
+<button class="flex-shrink-0 px-6 py-2.5 rounded-xl bg-surface-container-high text-on-surface-variant font-bold text-sm hover:text-white transition-colors">Desserts</button>
+</div>
+</section>
+<!-- Featured Section -->
+<section class="mb-12">
+<div class="flex justify-between items-end px-6 mb-6">
+<div>
+<span class="font-label text-tertiary text-[10px] tracking-[0.2em] uppercase font-bold">Chef's Selection</span>
+<h3 class="font-headline text-2xl text-white">Top Rated Eats</h3>
+</div>
+<button class="text-secondary text-xs font-bold uppercase tracking-widest flex items-center gap-1">View All <span class="material-symbols-outlined text-sm">arrow_forward</span></button>
+</div>
+<div class="flex overflow-x-auto gap-6 px-6 hide-scrollbar">
+<!-- Card 1 -->
+<div class="flex-shrink-0 w-64 bg-surface-container rounded-2xl overflow-hidden group">
+<div class="h-44 relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" data-alt="gourmet loaded fries with melted cheese, bacon bits and spring onions on a rustic tray under dramatic warm light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCSySrnvn4W42rolEvf3aoCmVz-2WREoiqth8XArH5U9BE4bDvMmGXdpTp_WGXnH9gwuqGlRvjEMzpsWjnGao4yZE4MMbeQuQ8oM4xI8OZU2FrKaCCZDXl0liQZuFvkgjm_vR4qFZme-of5C2cF-z428QmWjZgzsDMPgSh9oYMwOV84-jD30s83VTzgXdPnubhdVWABVqpQhzrHHvfq7YixnjePwgjxG9CRLtcXM-ptj_p_qqbn4lvVu3QrPX674-LKp7MjzA5pp24"/>
+<div class="absolute top-3 left-3 bg-tertiary text-on-tertiary text-[10px] font-black px-2 py-1 rounded">BEST SELLER</div>
+</div>
+<div class="p-5">
+<h4 class="font-headline font-bold text-white mb-1">Truffle Loaded Fries</h4>
+<p class="text-on-surface-variant text-xs line-clamp-1 mb-4">Parmesan, truffle oil, and chives</p>
+<div class="flex justify-between items-center">
+<span class="font-label text-xl font-bold text-secondary gold-glow">$12.50</span>
+<button class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center red-glow active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-white">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="flex-shrink-0 w-64 bg-surface-container rounded-2xl overflow-hidden group">
+<div class="h-44 relative overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" data-alt="crispy golden chicken tenders served with a side of spicy mayo dipping sauce in a luxury cinema tray" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAdcn5FgLW9EK71j6-z5-o3hmyqkAipRzhX6oUo45ybus-ZSrS-kqPl6P9z-tJSqluQWxLZOh2Oh1j0rcjY-otRsLuPJt7Vt7q4p-wrFL6M0SrV9SIWivBaHM7fOWzhDImHQUfRCu0_K8j_sK4frHJ6LDbcOMuuF19vt2JmOyef_dBdNnhpivbY0E2nnkNcyWM2WcQ2t1Jp-Hss3LZkxQDXam3yvi5fZ690ZOAZdTPSTY-73k1MbhYoEOFeVlbMwF0T3gMA3YTpB3E"/>
+</div>
+<div class="p-5">
+<h4 class="font-headline font-bold text-white mb-1">Spicy Glazed Tenders</h4>
+<p class="text-on-surface-variant text-xs line-clamp-1 mb-4">Buttermilk brined with gochujang glaze</p>
+<div class="flex justify-between items-center">
+<span class="font-label text-xl font-bold text-secondary gold-glow">$15.00</span>
+<button class="w-10 h-10 bg-primary rounded-xl flex items-center justify-center red-glow active:scale-90 transition-transform">
+<span class="material-symbols-outlined text-white">add</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Flash Deals Section -->
+<section class="px-6 mb-12">
+<div class="flex justify-between items-center mb-6">
+<div class="flex items-center gap-3">
+<h3 class="font-headline text-2xl text-white">Flash Deals</h3>
+<div class="bg-primary/20 border border-primary/40 px-3 py-1 rounded flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-sm animate-pulse" style="font-variation-settings: 'FILL' 1;">timer</span>
+<span class="font-label text-primary font-bold text-sm tracking-widest">23:41</span>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 gap-6">
+<!-- Deal Card -->
+<div class="relative bg-surface-container rounded-2xl p-4 flex gap-4 overflow-hidden group">
+<div class="absolute -right-8 -top-8 w-24 h-24 bg-primary/10 rounded-full blur-2xl"></div>
+<!-- Deal Ribbon -->
+<div class="absolute top-0 right-0">
+<div class="bg-primary text-white text-[10px] font-black py-1 px-8 rotate-45 translate-x-4 -translate-y-1 shadow-lg">DEAL</div>
+</div>
+<div class="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="stack of decadent chocolate glazed donuts with colorful sprinkles on a dark moody background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBwgl50SCPHDDWYTEPbujOwLCBorPVdPK0B1r3rQ343W95ktvcLh2MjDfzCJRNtIT2F9eviUchfo8GCYRB_D6kPbLMExyZFOsdUXBTOlI07LjhkHhlTZjp_JKMCSI-yOL4VEn5N6ariMtjkkQ4JkertJMfkPuy9Yhb7XLECVX8SJtmCCFLypaWinH2U9-L4JytKxyprawzZ4MkYrga8qWbFsfFdB7Mv5nc8N9WipHrJtKqsBRVNfczpZ-ANRyyxnD1J6H6pXfnJqhQ"/>
+</div>
+<div class="flex-grow flex flex-col justify-center">
+<h4 class="font-headline font-bold text-white mb-1">Midnight Donut Box</h4>
+<p class="text-on-surface-variant text-xs mb-2">Assorted 4-pack gourmet donuts</p>
+<div class="flex items-center gap-3">
+<span class="font-label text-lg font-bold text-secondary">$8.99</span>
+<span class="font-label text-xs text-on-surface-variant line-through">$14.00</span>
+</div>
+</div>
+<div class="flex items-center">
+<button class="bg-primary/10 hover:bg-primary transition-colors text-primary hover:text-white p-2 rounded-lg">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+<!-- Deal Card 2 -->
+<div class="relative bg-surface-container rounded-2xl p-4 flex gap-4 overflow-hidden group">
+<div class="absolute top-0 right-0">
+<div class="bg-primary text-white text-[10px] font-black py-1 px-8 rotate-45 translate-x-4 -translate-y-1 shadow-lg">DEAL</div>
+</div>
+<div class="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="a tall elegant glass of iced strawberry lemonade with mint leaves and dramatic backlighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1L7zF9GcsTbpkJ7e_SWXIGWWjq8K3DK1VTJHHwcaWzFIwvXIXtyvpTw9qkDY9t7_2Yo69UHxFq5oywAMooea4wz2RFPeEXa_va0bNapgC-hLew-LwvVwsTCJ1y4kAWdhezDdOw7Sl-GjTR9s4cUZPPK9x9LgxeJjO5n7kZ066fNH21T_i1h4vd5bfhGoGYMLUbjZJCa2tvktJWap09Xxnn-xmsRY-H6hMCdvr9aKQ64FUtpvUdozhfcInJ346pv2YTWHDYh_UNMI"/>
+</div>
+<div class="flex-grow flex flex-col justify-center">
+<h4 class="font-headline font-bold text-white mb-1">Summer Refresher</h4>
+<p class="text-on-surface-variant text-xs mb-2">Artisan lemonade with wild berries</p>
+<div class="flex items-center gap-3">
+<span class="font-label text-lg font-bold text-secondary">$4.50</span>
+<span class="font-label text-xs text-on-surface-variant line-through">$7.00</span>
+</div>
+</div>
+<div class="flex items-center">
+<button class="bg-primary/10 hover:bg-primary transition-colors text-primary hover:text-white p-2 rounded-lg">
+<span class="material-symbols-outlined">add_shopping_cart</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Signature Experience Banner -->
+<section class="px-6 mb-12">
+<div class="w-full h-40 rounded-3xl overflow-hidden relative border border-secondary/20">
+<div class="absolute inset-0 bg-gradient-to-r from-surface-container-highest to-transparent z-10"></div>
+<div class="absolute inset-0 z-0">
+<img class="w-full h-full object-cover opacity-50" data-alt="wide shot of a luxury cinema screen with warm ambient floor lighting and plush velvet seating in darkness" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDMbUnAzQIWwMTMNAwVzmCnKmK0OBJO9vWD7OXncbKJNaV0isewe3pCwNtcDm8j4Av-EnOEFY_qFy0BD6_bjor8aaTPM1yD9T507i3VJHEuX4qdlEjUobwsroUUsUQ5gOKN5wVXdROwYl2sALFgyfrHcEcJUl77pvPl43xwvzyoilkM2PLQ3Ollmc_Cx63yQr10-Ku8R4sFK6q3mh9F3KUGyYKV-4VLYTQ0TATOcux1k4uH-jTgtn1HdsYisWgSfIrQllPWHZeIsgI"/>
+</div>
+<div class="relative z-20 h-full p-8 flex flex-col justify-center">
+<span class="text-secondary font-label text-[10px] tracking-widest uppercase mb-1">VIP Exclusive</span>
+<h3 class="font-display text-2xl italic text-white leading-tight mb-2">Elevate Your<br/>Movie Night</h3>
+<p class="text-tertiary text-xs font-bold uppercase tracking-tighter">Join Platinum Membership →</p>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="bg-[#161B22]/90 backdrop-blur-2xl fixed bottom-0 w-full z-50 rounded-t-2xl shadow-[0_-4px_20px_rgba(0,0,0,0.5)] flex justify-around items-center h-20 pb-safe px-4">
+<a class="flex flex-col items-center justify-center text-[#E8192C] drop-shadow-[0_0_8px_rgba(232,25,44,0.6)] group" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">home</span>
+<span class="font-['Epilogue'] text-[10px] uppercase font-bold tracking-widest mt-1">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-gray-500 hover:text-white transition-all group" href="#">
+<span class="material-symbols-outlined">restaurant_menu</span>
+<span class="font-['Epilogue'] text-[10px] uppercase font-bold tracking-widest mt-1">Menu</span>
+</a>
+<a class="flex flex-col items-center justify-center text-gray-500 hover:text-white transition-all group" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span class="font-['Epilogue'] text-[10px] uppercase font-bold tracking-widest mt-1">Orders</span>
+</a>
+<a class="flex flex-col items-center justify-center text-gray-500 hover:text-white transition-all group" href="#">
+<span class="material-symbols-outlined">person</span>
+<span class="font-['Epilogue'] text-[10px] uppercase font-bold tracking-widest mt-1">Profile</span>
+</a>
+</nav>
+</body></html>
