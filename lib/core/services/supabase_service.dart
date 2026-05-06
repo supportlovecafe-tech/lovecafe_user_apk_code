@@ -67,7 +67,7 @@ class SupabaseService {
       'status': 'PENDING',
       'payment_status': 'PAID',
       'payment_method': 'DEMO_UPI',
-      'timestamp': DateTime.now().toIso8601String(),
+      'timestamp': DateTime.now().toUtc().toIso8601String(),
       'is_demo_order': true,
     };
 

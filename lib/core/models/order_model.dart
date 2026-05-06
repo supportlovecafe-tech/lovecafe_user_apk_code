@@ -67,17 +67,7 @@ class OrderModel {
     return {
       'id': id,
       'display_id': displayId,
-      'items': items
-          .map((item) => {
-                'food_id': item.foodItem.id,
-                'food_name': item.foodItem.name,
-                'food_price': item.foodItem.price,
-                'food_image': item.foodItem.imageUrl,
-                'food_description': item.foodItem.description,
-                'food_category': item.foodItem.category,
-                'quantity': item.quantity,
-              })
-          .toList(),
+      'items': items.map((item) => item.toMap()).toList(),
       'total_amount': totalAmount,
       'status': status.name,
       'timestamp': timestamp.toIso8601String(),
@@ -110,6 +100,7 @@ class OrderModel {
             category: row['food_category']?.toString() ?? 'Classics',
           ),
           quantity: (row['quantity'] as num?)?.toInt() ?? 1,
+          isDelivered: row['is_delivered'] == true,
         );
       }).toList(),
       totalAmount: (map['total_amount'] as num?)?.toDouble() ?? 0,
@@ -137,8 +128,9 @@ class OrderModel {
 class OrderItem {
   final FoodItem foodItem;
   final int quantity;
+  final bool isDelivered;
 
-  OrderItem({required this.foodItem, required this.quantity});
+  OrderItem({required this.foodItem, required this.quantity, this.isDelivered = false});
 
   Map<String, dynamic> toMap() {
     return {
@@ -149,6 +141,7 @@ class OrderItem {
       'food_description': foodItem.description,
       'food_category': foodItem.category,
       'quantity': quantity,
+      'is_delivered': isDelivered,
     };
   }
 }

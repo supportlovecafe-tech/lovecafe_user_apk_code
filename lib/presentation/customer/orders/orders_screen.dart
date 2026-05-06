@@ -474,20 +474,32 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
             ],
           ),
           const SizedBox(height: 20),
-          ...order.items.map((item) => Padding(
+          ...order.items.map((item) {
+            final isItemDelivered = item.isDelivered;
+            return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
                 child: Row(
                   children: [
+                    if (isItemDelivered)
+                      Container(
+                        margin: const EdgeInsets.only(right: 12),
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.check_circle_rounded, color: Colors.green, size: 16),
+                      ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: colorScheme.primary.withOpacity(0.1),
+                        color: isItemDelivered ? Colors.green.withOpacity(0.1) : colorScheme.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         '${item.quantity}x',
                         style: theme.textTheme.labelSmall?.copyWith(
-                          color: colorScheme.primary,
+                          color: isItemDelivered ? Colors.green : colorScheme.primary,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -496,16 +508,23 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
                     Expanded(
                       child: Text(
                         item.foodItem.name,
-                        style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isItemDelivered ? Colors.green : null,
+                        ),
                       ),
                     ),
                     Text(
                       '₹${(item.foodItem.price * item.quantity).toInt()}',
-                      style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: isItemDelivered ? Colors.green : null,
+                      ),
                     ),
                   ],
                 ),
-              )),
+              );
+          }),
           const SizedBox(height: 12),
           Divider(color: colorScheme.outline.withOpacity(0.1)),
           const SizedBox(height: 12),
