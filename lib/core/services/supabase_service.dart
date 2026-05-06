@@ -62,7 +62,7 @@ class SupabaseService {
       'display_id': displayId, // Correctly using the passed client-side ID
       'items': items,
       'total_amount': totalAmount,
-      'location': location,
+      'location': "APK, ${location.replaceAll(' • ', ', ')}",
       'customer_phone': customerPhone,
       'status': 'PENDING',
       'payment_status': 'PAID',
