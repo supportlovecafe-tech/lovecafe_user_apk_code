@@ -15,6 +15,7 @@ class NotificationNotifier extends StateNotifier<List<AppNotification>> {
         _init(next.userId!);
       } else if (next.userId == null) {
         _cleanup();
+        state = []; // Clear notification history on logout
       }
     });
 

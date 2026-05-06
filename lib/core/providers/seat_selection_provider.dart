@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'menu_provider.dart';
+import 'auth_provider.dart';
 
 class SeatSelectionState {
   final String? hallId;
@@ -62,11 +63,13 @@ class SeatSelectionState {
 
 class SeatSelectionNotifier extends StateNotifier<SeatSelectionState> {
   final Ref _ref;
-  static const String _storageKey = 'ce_seat_selection';
+  final String? _userId;
+  String get _storageKey => 'ce_seat_selection_${_userId ?? 'guest'}';
 
-  SeatSelectionNotifier(this._ref) : super(const SeatSelectionState()) {
+  SeatSelectionNotifier(this._ref, this._userId) : super(const SeatSelectionState()) {
     _restoreSelection();
   }
+
 
   Future<void> _persistSelection() async {
     final prefs = await SharedPreferences.getInstance();
@@ -116,6 +119,8 @@ class SeatSelectionNotifier extends StateNotifier<SeatSelectionState> {
 
 final seatSelectionProvider =
     StateNotifierProvider<SeatSelectionNotifier, SeatSelectionState>((ref) {
-  return SeatSelectionNotifier(ref);
+  final auth = ref.watch(authProvider);
+  return SeatSelectionNotifier(ref, auth.userId);
 });
+
 

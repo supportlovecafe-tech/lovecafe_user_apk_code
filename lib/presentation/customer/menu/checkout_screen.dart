@@ -259,7 +259,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         _priceRow('Service Fee', fee),
         if (discount > 0) ...[
           const SizedBox(height: 8),
-          _priceRow('Loyalty Discount', -discount, isDiscount: true),
+          _priceRow('CinePoints Discount', -discount, isDiscount: true),
         ],
         const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Divider()),
         Row(

@@ -67,7 +67,7 @@ class SupabaseService {
       'status': 'PENDING',
       'payment_status': 'PAID',
       'payment_method': 'DEMO_UPI',
-      'timestamp': DateTime.now().toUtc().toIso8601String(),
+      'timestamp': DateTime.now().toIso8601String(),
       'is_demo_order': true,
     };
 
@@ -94,7 +94,6 @@ class SupabaseService {
     required String userId,
     required String orderId,
     required int pointsRedeemed,
-    required double redeemedValue,
     required int pointsEarned,
   }) async {
     try {
@@ -102,7 +101,6 @@ class SupabaseService {
         'p_user_id': userId,
         'p_order_id': orderId,
         'p_points_redeemed': pointsRedeemed,
-        'p_redeemed_value': redeemedValue,
         'p_points_earned': pointsEarned,
       });
     } catch (e) {
@@ -128,6 +126,20 @@ class SupabaseService {
 
     final response = await query.order('timestamp', ascending: false);
     return List<Map<String, dynamic>>.from(response);
+  }
+
+  Future<List<Map<String, dynamic>>> fetchCinePointsHistory(String userId) async {
+    try {
+      final response = await _client
+          .from('loyalty_transactions')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      print('SupabaseService.fetchCinePointsHistory error: $e');
+      return [];
+    }
   }
 
   // --- Real-time Subscription ---

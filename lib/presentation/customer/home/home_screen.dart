@@ -1,7 +1,10 @@
+import 'dart:ui';
+import '../loyalty/cinepoints_history_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/models/food_item.dart';
@@ -15,6 +18,7 @@ import '../../../core/providers/loyalty_provider.dart';
 import '../menu/widgets/location_popup.dart';
 import '../../shared/widgets/custom_bottom_nav_bar.dart';
 import '../../shared/widgets/safe_network_image.dart';
+import '../../shared/widgets/food_item_card.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -247,15 +251,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'CineSeat Food',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                color: colorScheme.primary,
-                fontWeight: FontWeight.w900,
-                letterSpacing: -0.5,
-              ),
+            Image.asset(
+              'assets/logo_transparent.png',
+              height: 32,
+              filterQuality: FilterQuality.high,
+              fit: BoxFit.contain,
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
             Row(
               children: [
                 Text(
@@ -392,26 +394,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
           decoration: BoxDecoration(
-            color: colorScheme.surface,
+            color: AppColors.surfaceDark.withOpacity(0.6),
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.borderDark.withOpacity(0.5)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: AppColors.primary.withOpacity(0.05),
                 blurRadius: 15,
-                offset: const Offset(0, 5),
+                spreadRadius: 2,
               ),
             ],
           ),
-          child: TextField(
-            onChanged: (val) => setState(() => _searchQuery = val),
-            decoration: InputDecoration(
-              hintText: 'Search popcorn, tacos, drinks...',
-              hintStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.3)),
-              border: InputBorder.none,
-              icon: Icon(Icons.search_rounded, color: colorScheme.primary),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: TextField(
+                onChanged: (val) => setState(() => _searchQuery = val),
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Search popcorn, tacos, drinks...',
+                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
+                  border: InputBorder.none,
+                  icon: Icon(Icons.search_rounded, color: AppColors.primary),
+                ),
+              ),
             ),
           ),
-        ),
+        ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.2, end: 0),
       ),
     );
   }
@@ -423,48 +433,72 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         margin: const EdgeInsets.symmetric(horizontal: 24),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(32),
-          gradient: LinearGradient(
-            colors: [Colors.black, Colors.grey[900]!],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: AppColors.surfaceDark.withOpacity(0.4),
+          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withOpacity(0.2),
+              blurRadius: 30,
+              spreadRadius: 5,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
-        child: Stack(
-          children: [
-             Positioned.fill(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(32),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(32),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Stack(
+              children: [
+                Positioned.fill(
                   child: Image.network(
                     'https://images.unsplash.com/photo-1513106580091-1d82408b8cd6?w=800',
                     fit: BoxFit.cover,
-                    opacity: const AlwaysStoppedAnimation(0.4),
+                    opacity: const AlwaysStoppedAnimation(0.3),
+                  ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+                   .scale(begin: const Offset(1.0, 1.0), end: const Offset(1.05, 1.05), duration: 10.seconds),
+                ),
+                Positioned(
+                  right: -50,
+                  top: -50,
+                  child: Container(
+                    width: 150,
+                    height: 150,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                         BoxShadow(color: AppColors.secondary.withOpacity(0.4), blurRadius: 100)
+                      ]
+                    ),
                   ),
                 ),
-             ),
-             Padding(
-               padding: const EdgeInsets.all(32.0),
-               child: Column(
-                 crossAxisAlignment: CrossAxisAlignment.start,
-                 mainAxisAlignment: MainAxisAlignment.center,
-                 children: [
-                   Container(
-                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                     decoration: BoxDecoration(
-                       color: Colors.orange,
-                       borderRadius: BorderRadius.circular(20),
-                     ),
-                     child: const Text('LIMITED OFFER', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                   ),
-                   const SizedBox(height: 12),
-                   const Text('50% OFF\non Large Combos', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
-                   const SizedBox(height: 8),
-                   const Text('Use code: CINEFEAST', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                 ],
-               ),
-             ),
-          ],
+                Padding(
+                  padding: const EdgeInsets.all(32.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withOpacity(0.2),
+                          border: Border.all(color: AppColors.accent.withOpacity(0.5)),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text('NEON DEAL', style: TextStyle(color: AppColors.accent, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                      ).animate().shimmer(duration: 2.seconds, delay: 1.seconds),
+                      const SizedBox(height: 12),
+                      const Text('50% OFF\nOn Cinema Combos', style: TextStyle(color: Colors.white, fontSize: 24, height: 1.1, fontWeight: FontWeight.w900)),
+                      const SizedBox(height: 8),
+                      Text('Use code: GLOW50', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
+      ).animate().fadeIn(duration: 500.ms).scale(begin: const Offset(0.9, 0.9), end: const Offset(1.0, 1.0)),
     );
   }
 
@@ -473,31 +507,43 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return SliverToBoxAdapter(
        child: Padding(
          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-         child: Container(
-           padding: const EdgeInsets.all(16),
-           decoration: BoxDecoration(
-             color: Colors.purple.withOpacity(0.1),
-             borderRadius: BorderRadius.circular(20),
-             border: Border.all(color: Colors.purple.withOpacity(0.2)),
-           ),
-           child: Row(
-             children: [
-               const Icon(Icons.stars_rounded, color: Colors.purple),
-               const SizedBox(width: 12),
-               Expanded(
-                 child: Column(
-                   crossAxisAlignment: CrossAxisAlignment.start,
-                   children: [
-                     const Text('Loyalty Points', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                     Text('You have ${loyalty.availablePoints} points to redeem', style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.6))),
-                   ],
+         child: GestureDetector(
+           onTap: () {
+             // Navigate to CinePoints History
+             Navigator.push(
+               context,
+               MaterialPageRoute(builder: (context) => const CinePointsHistoryScreen()),
+             );
+           },
+           child: Container(
+             padding: const EdgeInsets.all(16),
+             decoration: BoxDecoration(
+               color: AppColors.secondary.withOpacity(0.1),
+               borderRadius: BorderRadius.circular(20),
+               border: Border.all(color: AppColors.secondary.withOpacity(0.3)),
+               boxShadow: [
+                 BoxShadow(color: AppColors.secondary.withOpacity(0.1), blurRadius: 15),
+               ],
+             ),
+             child: Row(
+               children: [
+                 Icon(Icons.stars_rounded, color: AppColors.secondary, size: 28).animate(onPlay: (controller) => controller.repeat(reverse: true)).scale(duration: 1.seconds, begin: const Offset(1, 1), end: const Offset(1.1, 1.1)),
+                 const SizedBox(width: 12),
+                 Expanded(
+                   child: Column(
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       const Text('CinePoints', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12, color: Colors.white)),
+                       Text('You have ${loyalty.availablePoints} points to redeem', style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.5))),
+                     ],
+                   ),
                  ),
-               ),
-               Icon(Icons.arrow_forward_ios_rounded, size: 12, color: Colors.white.withOpacity(0.4)),
-             ],
+                 Icon(Icons.arrow_forward_ios_rounded, size: 12, color: AppColors.secondary.withOpacity(0.5)),
+               ],
+             ),
            ),
          ),
-       ),
+       ).animate().fadeIn(delay: 200.ms),
     );
   }
 
@@ -508,6 +554,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         height: 60,
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: categories.length,
           itemBuilder: (context, index) {
@@ -519,19 +566,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 label: Text(cat),
                 selected: isSelected,
                 onSelected: (val) => ref.read(categoryProvider.notifier).state = cat,
-                backgroundColor: Colors.transparent,
-                selectedColor: AppColors.primary,
+                backgroundColor: AppColors.surfaceDark.withOpacity(0.5),
+                selectedColor: AppColors.primary.withOpacity(0.2),
+                side: BorderSide(
+                  color: isSelected ? AppColors.primary : AppColors.borderDark,
+                ),
                 labelStyle: TextStyle(
-                  color: isSelected ? Colors.white : Colors.grey,
-                  fontWeight: FontWeight.bold,
+                  color: isSelected ? AppColors.primaryLight : Colors.white.withOpacity(0.4),
+                  fontWeight: isSelected ? FontWeight.w900 : FontWeight.normal,
                   fontSize: 12,
                 ),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
             );
           },
         ),
-      ),
+      ).animate().slideX(begin: 0.2, end: 0, duration: 400.ms),
     );
   }
 
@@ -546,7 +596,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: 1)),
+                Text(title, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, letterSpacing: 2, color: AppColors.accent)),
                 Text(subtitle, style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.4))),
               ],
             ),
@@ -571,7 +621,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
              return Container(
                width: 200,
                margin: const EdgeInsets.symmetric(horizontal: 8),
-               child: _buildFoodCard(context, item),
+               child: FoodItemCard(
+                 id: item.id,
+                 name: item.name,
+                 imageUrl: item.imageUrl,
+                 price: item.price,
+                 onTap: () => context.push('/food-detail', extra: item),
+                 onAdd: () {
+                   ref.read(cartProvider.notifier).validateAndAddItem(item, ref.read(seatSelectionProvider).hallId);
+                   ScaffoldMessenger.of(context).showSnackBar(
+                     SnackBar(
+                       content: Text('${item.name} added to cart'),
+                       behavior: SnackBarBehavior.floating,
+                       duration: const Duration(seconds: 1),
+                     ),
+                   );
+                 },
+               ),
              );
           },
         ),
@@ -620,8 +686,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                              children: [
                                Text('₹${combo.price}', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900)),
                                IconButton(
-                                 onPressed: () => ref.read(cartProvider.notifier).addItem(combo),
+                                 onPressed: () {
+                                   ref.read(cartProvider.notifier).validateAndAddItem(combo, ref.read(seatSelectionProvider).hallId);
+                                   ScaffoldMessenger.of(context).showSnackBar(
+                                     SnackBar(
+                                       content: Text('${combo.name} added to cart'),
+                                       behavior: SnackBarBehavior.floating,
+                                       duration: const Duration(seconds: 1),
+                                     ),
+                                   );
+                                 },
                                  icon: const Icon(Icons.add_circle, color: AppColors.primary),
+                                 splashRadius: 24,
                                ),
                              ],
                            ),
@@ -638,57 +714,5 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildFoodCard(BuildContext context, FoodItem item) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-           Expanded(
-             child: Stack(
-               children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                    child: SafeNetworkImage(imageUrl: item.imageUrl, width: double.infinity, fit: BoxFit.cover),
-                  ),
-                  Positioned(
-                    top: 12,
-                    right: 12,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                      child: const Icon(Icons.favorite_border, size: 16, color: Colors.grey),
-                    ),
-                  ),
-               ],
-             ),
-           ),
-           Padding(
-             padding: const EdgeInsets.all(16.0),
-             child: Column(
-               crossAxisAlignment: CrossAxisAlignment.start,
-               children: [
-                 Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                 const SizedBox(height: 4),
-                 Text('₹${item.price}', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900, fontSize: 16)),
-                 const SizedBox(height: 12),
-                 ElevatedButton(
-                   onPressed: () => ref.read(cartProvider.notifier).addItem(item),
-                   style: ElevatedButton.styleFrom(
-                     minimumSize: const Size.fromHeight(40),
-                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                   ),
-                   child: const Text('ADD TO CART', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-                 ),
-               ],
-             ),
-           ),
-        ],
-      ),
-    );
-  }
+  // _buildFoodCard removed as FoodItemCard is now used directly
 }

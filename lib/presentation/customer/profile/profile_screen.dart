@@ -6,6 +6,7 @@ import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/theme_provider.dart';
 import '../../../core/providers/loyalty_provider.dart';
 import '../../shared/widgets/custom_bottom_nav_bar.dart';
+import '../loyalty/cinepoints_history_screen.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -277,30 +278,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Row(children: [
       _buildStatCard(context, 'SCREENINGS', '42', Icons.stars_rounded), 
       const SizedBox(width: 16), 
-      _buildStatCard(context, 'CINEPOINTS', loyalty.availablePoints.toString(), Icons.auto_awesome_rounded)
+      Expanded(
+        child: InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const CinePointsHistoryScreen()),
+            );
+          },
+          borderRadius: BorderRadius.circular(32),
+          child: _buildStatCard(context, 'CINEPOINTS', loyalty.availablePoints.toString(), Icons.auto_awesome_rounded, isExpanded: false),
+        ),
+      ),
     ]);
   }
 
-  Widget _buildStatCard(BuildContext context, String label, String value, IconData icon) {
+  Widget _buildStatCard(BuildContext context, String label, String value, IconData icon, {bool isExpanded = true}) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: colorScheme.surface,
-          borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
-        ),
-        child: Column(children: [
-          Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: colorScheme.primary.withOpacity(0.1), shape: BoxShape.circle), child: Icon(icon, color: colorScheme.primary, size: 20)),
-          const SizedBox(height: 16),
-          Text(value, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 4),
-          Text(label, style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurface.withOpacity(0.4), fontWeight: FontWeight.w900, letterSpacing: 1)),
-        ]),
+    Widget card = Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: colorScheme.surface,
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
       ),
+      child: Column(children: [
+        Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: colorScheme.primary.withOpacity(0.1), shape: BoxShape.circle), child: Icon(icon, color: colorScheme.primary, size: 20)),
+        const SizedBox(height: 16),
+        Text(value, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
+        const SizedBox(height: 4),
+        Text(label, style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurface.withOpacity(0.4), fontWeight: FontWeight.w900, letterSpacing: 1)),
+      ]),
     );
+
+    return isExpanded ? Expanded(child: card) : card;
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
@@ -331,9 +343,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Container(
       width: double.infinity,
       child: OutlinedButton.icon(
-        onPressed: () { 
-          ref.read(authProvider.notifier).logout(); 
-          context.go('/welcome'); 
+        onPressed: () async { 
+          await ref.read(authProvider.notifier).logout(); 
+          if (context.mounted) {
+            context.go('/welcome');
+          }
         },
         icon: const Icon(Icons.logout_rounded, size: 20),
         label: Text('SIGN OUT', style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900, letterSpacing: 2)),

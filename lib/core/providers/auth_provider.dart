@@ -2,6 +2,14 @@ import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/auth_service.dart';
+import 'cart_provider.dart';
+import 'seat_selection_provider.dart';
+import 'orders_provider.dart';
+import 'loyalty_provider.dart';
+import 'notification_provider.dart';
+import 'menu_provider.dart';
+
+
 
 enum AuthStatus { AUTHENTICATED, GUEST, UNAUTHENTICATED }
 
@@ -226,8 +234,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
+    // 1. Sign out from the backend auth service
     await _ref.read(authServiceProvider).signOut();
+    
+    // 2. FULL STORAGE CLEAR (The Flutter equivalent of AsyncStorage.clear())
+    // This wipes all persistent data including cart, cinema selection, and session tokens.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); 
+    
+    // 3. Reset Global State (Update auth status to UNAUTHENTICATED)
     state = AuthState.unauthenticated();
+    
+    // 4. PURGE ALL IN-MEMORY STATE (Riverpod Invalidation)
+    // This forces all user-specific providers to dispose and recreate with fresh state.
+    _ref.invalidate(cartProvider);
+    _ref.invalidate(seatSelectionProvider);
+    _ref.invalidate(ordersProvider);
+    _ref.invalidate(loyaltyProvider);
+    _ref.invalidate(notificationProvider);
+    _ref.invalidate(menuProvider);
+    
+    // 5. Re-persist the clean unauthenticated state
     _persistState();
   }
 }

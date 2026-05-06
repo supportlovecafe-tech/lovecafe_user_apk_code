@@ -14,7 +14,7 @@ final realtimeOrdersProvider = StreamProvider<List<OrderModel>>((ref) async* {
   }
 
   // 1. Initial fetch
-  final initialOrders = await supabase.fetchOrders(cinemaId);
+  final initialOrders = await supabase.fetchOrders(cinemaId: cinemaId);
   List<OrderModel> orders = initialOrders.map((data) => OrderModel.fromMap(data)).toList();
   yield orders;
 

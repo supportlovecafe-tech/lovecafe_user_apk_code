@@ -91,7 +91,6 @@ class OrdersNotifier extends StateNotifier<List<OrderModel>> {
     // Calculate loyalty
     final loyalty = _ref.read(loyaltyProvider.notifier);
     final pointsEarned = loyalty.calculateEarnedPoints(total);
-    final redeemedValue = loyalty.calculateRedeemableValue(pointsRedeemed);
 
     // Generate unique display ID: OUTLET-CUST-TIME (e.g. C1-U1-4567)
     final shortCinemaId = cinemaId.substring(0, 4).toUpperCase();
@@ -137,7 +136,6 @@ class OrdersNotifier extends StateNotifier<List<OrderModel>> {
           userId: userId,
           orderId: realId,
           pointsRedeemed: pointsRedeemed,
-          redeemedValue: redeemedValue,
           pointsEarned: pointsEarned,
         );
         // Refresh wallet

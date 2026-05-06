@@ -1,9 +1,11 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import 'safe_network_image.dart';
 
-class FoodItemCard extends StatelessWidget {
+class FoodItemCard extends StatefulWidget {
   final String id;
   final String name;
   final String imageUrl;
@@ -22,148 +24,156 @@ class FoodItemCard extends StatelessWidget {
   });
 
   @override
+  State<FoodItemCard> createState() => _FoodItemCardState();
+}
+
+class _FoodItemCardState extends State<FoodItemCard> {
+  bool _isPressed = false;
+
+  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.cardColor,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Image + Hero part (Tappable)
-          Expanded(
-            flex: 7,
-            child: GestureDetector(
-              onTap: onTap,
-              behavior: HitTestBehavior.opaque,
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                    child: Hero(
-                      tag: 'food_$id',
-                      child: SafeNetworkImage(
-                        imageUrl: imageUrl.isNotEmpty
-                            ? imageUrl
-                            : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400', 
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.circle,
-                        color: Colors.green,
-                        size: 12,
-                      ),
-                    ),
-                  ),
-                ],
+    return GestureDetector(
+      onTapDown: (_) => setState(() => _isPressed = true),
+      onTapUp: (_) {
+        setState(() => _isPressed = false);
+        widget.onTap?.call();
+      },
+      onTapCancel: () => setState(() => _isPressed = false),
+      child: AnimatedScale(
+        scale: _isPressed ? 0.95 : 1.0,
+        duration: const Duration(milliseconds: 150),
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppColors.surfaceDark.withOpacity(0.6),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(_isPressed ? 0.4 : 0.15),
+                blurRadius: _isPressed ? 30 : 15,
+                spreadRadius: _isPressed ? 5 : 0,
               ),
-            ),
+            ],
           ),
-          // Info + Add button part
-          Expanded(
-            flex: 4,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  GestureDetector(
-                    onTap: onTap,
-                    behavior: HitTestBehavior.opaque,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  // Image + Hero part
+                  Expanded(
+                    flex: 7,
+                    child: Stack(
                       children: [
-                        Text(
-                          name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTextStyles.headingMedium.copyWith(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w800,
+                        ClipRRect(
+                          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                          child: Hero(
+                            tag: 'food_${widget.id}',
+                            child: SafeNetworkImage(
+                              imageUrl: widget.imageUrl.isNotEmpty
+                                  ? widget.imageUrl
+                                  : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400', 
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '⭐ Best Seller',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            fontSize: 9,
-                            color: AppColors.accent,
-                            fontWeight: FontWeight.w600,
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(6),
+                            decoration: BoxDecoration(
+                              color: AppColors.bgDarkStart.withOpacity(0.8),
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(color: AppColors.success.withOpacity(0.5), blurRadius: 10)
+                              ],
+                            ),
+                            child: const Icon(
+                              Icons.circle,
+                              color: AppColors.success,
+                              size: 10,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Spacer(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '₹${price.toInt()}',
-                        style: AppTextStyles.priceLarge.copyWith(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.primary,
-                        ),
+                  // Info + Add button part
+                  Expanded(
+                    flex: 4,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTextStyles.headingMedium.copyWith(
+                              fontSize: 14,
+                              color: Colors.white,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '⭐ Neon Pick',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              fontSize: 9,
+                              color: AppColors.accent,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                            ),
+                          ).animate(onPlay: (controller) => controller.repeat(reverse: true)).shimmer(duration: 1.seconds),
+                          const Spacer(),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                '₹${widget.price.toInt()}',
+                                style: AppTextStyles.priceLarge.copyWith(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.primaryLight,
+                                ),
+                              ),
+                              _buildAddButton(),
+                            ],
+                          ),
+                        ],
                       ),
-                      _buildAddButton(),
-                    ],
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-        ],
+        ).animate().fadeIn(duration: 300.ms).slideY(begin: 0.1, end: 0),
       ),
     );
   }
 
   Widget _buildAddButton() {
     return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onAdd,
+      color: AppColors.primary.withOpacity(0.2),
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppColors.primary),
+      ),
+      elevation: 0,
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: widget.onAdd,
+        splashColor: AppColors.primary.withOpacity(0.5),
+        highlightColor: AppColors.primary.withOpacity(0.3),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [AppColors.primary, AppColors.brandOrange],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
           child: const Icon(
             Icons.add_rounded,
             color: Colors.white,

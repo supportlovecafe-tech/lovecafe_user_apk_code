@@ -1,6 +1,8 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/models/food_item.dart';
@@ -183,13 +185,14 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'What would you\nlike to eat?',
+              'Neon \nMenu',
               style: AppTextStyles.headingHero.copyWith(
-                fontSize: 32,
+                fontSize: 42,
                 height: 1.1,
+                color: Colors.white,
                 fontWeight: FontWeight.w900,
               ),
-            ),
+            ).animate().shimmer(duration: 2.seconds, color: AppColors.primaryLight.withOpacity(0.5)),
           ],
         ),
       ),
@@ -203,21 +206,35 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
         child: Container(
           decoration: BoxDecoration(
-            color: colorScheme.surface,
+            color: AppColors.surfaceDark.withOpacity(0.6),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+            border: Border.all(color: AppColors.borderDark.withOpacity(0.5)),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.accent.withOpacity(0.05),
+                blurRadius: 15,
+                spreadRadius: 2,
+              ),
+            ],
           ),
-          child: TextField(
-            onChanged: (v) => setState(() => _searchQuery = v),
-            decoration: InputDecoration(
-              hintText: 'Search deliciousness...',
-              hintStyle: TextStyle(color: colorScheme.onSurface.withOpacity(0.3)),
-              prefixIcon: Icon(Icons.search, color: colorScheme.primary),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(vertical: 15),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: TextField(
+                onChanged: (v) => setState(() => _searchQuery = v),
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  hintText: 'Search deliciousness...',
+                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
+                  prefixIcon: const Icon(Icons.search, color: AppColors.accent),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 15),
+                ),
+              ),
             ),
           ),
-        ),
+        ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.2, end: 0),
       ),
     );
   }
@@ -227,10 +244,11 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
       pinned: true,
       delegate: _StickyTabBarDelegate(
         child: Container(
-          color: Theme.of(context).colorScheme.background.withOpacity(0.95),
+          color: AppColors.bgDarkStart.withOpacity(0.95),
           height: 60,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemCount: categories.length,
             itemBuilder: (context, index) {
@@ -239,20 +257,23 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
               
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                child: FilterChip(
+                child: ChoiceChip(
                   label: Text(cat),
                   selected: isSelected,
                   onSelected: (val) {
                     ref.read(categoryProvider.notifier).setCategory(cat == 'All' ? null : cat);
                   },
-                  selectedColor: Theme.of(context).colorScheme.primary,
+                  backgroundColor: AppColors.surfaceDark.withOpacity(0.5),
+                  selectedColor: AppColors.primary.withOpacity(0.2),
+                  side: BorderSide(
+                    color: isSelected ? AppColors.primary : AppColors.borderDark,
+                  ),
                   labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
-                    fontWeight: FontWeight.bold,
+                    color: isSelected ? AppColors.primaryLight : Colors.white.withOpacity(0.4),
+                    fontWeight: isSelected ? FontWeight.w900 : FontWeight.normal,
                     fontSize: 12,
                   ),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  showCheckmark: false,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
               );
             },

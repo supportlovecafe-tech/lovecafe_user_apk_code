@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/food_item.dart';
 import 'supabase_provider.dart';
+import 'auth_provider.dart';
+
 
 class MenuState {
   final List<FoodItem> items;
@@ -26,7 +28,12 @@ class MenuNotifier extends StateNotifier<MenuState> {
   final Ref _ref;
 
   MenuNotifier(this._ref) : super(const MenuState()) {
-    // Initial fetch happens when a cinema is selected elsewhere
+    // Session Protection: Clear menu on logout
+    _ref.listen<AuthState>(authProvider, (previous, next) {
+      if (next.status == AuthStatus.UNAUTHENTICATED && state.items.isNotEmpty) {
+        state = const MenuState();
+      }
+    });
   }
 
   Future<void> refreshMenu(String cinemaId) async {
