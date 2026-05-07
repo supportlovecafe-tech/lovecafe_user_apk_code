@@ -33,9 +33,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final auth = ref.watch(authProvider);
     final loyalty = ref.watch(loyaltyProvider);
 
-    final subtotal = cart.fold<double>(0, (sum, item) => sum + (item.foodItem.price * item.quantity));
-    const serviceFee = 4.5;
-    final baseTotal = subtotal + serviceFee;
+    final cartNotifier = ref.watch(cartProvider.notifier);
+    final subtotal = cartNotifier.subtotal;
+    final cgst = cartNotifier.cgst;
+    final sgst = cartNotifier.sgst;
+    final platformFee = cartNotifier.platformCharges;
+    final baseTotal = cartNotifier.totalAmount;
     
     // Loyalty Logic
     final maxRedeemablePoints = loyalty.availablePoints;
@@ -97,7 +100,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             _buildPaymentMethods(),
             const SizedBox(height: 40),
             
-            _buildPriceBreakdown(subtotal, serviceFee, actualRedeemValue, grandTotal),
+            _buildPriceBreakdown(subtotal, cgst, sgst, platformFee, actualRedeemValue, grandTotal),
             const SizedBox(height: 120),
           ],
         ),
@@ -251,12 +254,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Widget _buildPriceBreakdown(double subtotal, double fee, double discount, double total) {
+  Widget _buildPriceBreakdown(double subtotal, double cgst, double sgst, double platformFee, double discount, double total) {
     return Column(
       children: [
         _priceRow('Subtotal', subtotal),
         const SizedBox(height: 8),
-        _priceRow('Service Fee', fee),
+        _priceRow('CGST (2.5%)', cgst),
+        const SizedBox(height: 8),
+        _priceRow('SGST (2.5%)', sgst),
+        const SizedBox(height: 8),
+        _priceRow('Platform Fee (1%)', platformFee),
         if (discount > 0) ...[
           const SizedBox(height: 8),
           _priceRow('CinePoints Discount', -discount, isDiscount: true),
@@ -356,6 +363,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         paymentMethod: _selectedMethod,
         customerPhone: auth.phone ?? 'guest',
         pointsRedeemed: pointsRedeemed,
+        metadata: {
+          'subtotal': subtotal,
+          'cgst': cgst,
+          'sgst': sgst,
+          'platform_charges': platformFee,
+        },
       );
 
       final latestOrder = ref.read(ordersProvider).first;

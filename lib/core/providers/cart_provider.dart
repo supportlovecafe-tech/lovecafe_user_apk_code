@@ -130,10 +130,14 @@ class CartNotifier extends StateNotifier<List<CartItem>> {
     _saveCart();
   }
 
-  double get totalAmount {
-    return state.fold(
-        0, (sum, item) => sum + (item.foodItem.price * item.quantity));
-  }
+  double get subtotal => state.fold(
+      0, (sum, item) => sum + (item.foodItem.price * item.quantity));
+      
+  double get cgst => subtotal * 0.025;
+  double get sgst => subtotal * 0.025;
+  double get platformCharges => subtotal * 0.01;
+
+  double get totalAmount => subtotal + cgst + sgst + platformCharges;
 
   void clearCart() {
     state = [];

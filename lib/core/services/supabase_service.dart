@@ -56,6 +56,7 @@ class SupabaseService {
     required String displayId,
     String? authUserId,
     String? customerProfileId,
+    Map<String, dynamic>? metadata,
   }) async {
     final orderData = {
       'cinema_id': cinemaId,
@@ -69,6 +70,7 @@ class SupabaseService {
       'payment_method': 'DEMO_UPI',
       'timestamp': DateTime.now().toUtc().toIso8601String(),
       'is_demo_order': true,
+      'metadata': metadata,
     };
 
     // If it's a real Auth user, use customer_id

@@ -79,6 +79,7 @@ class OrdersNotifier extends StateNotifier<List<OrderModel>> {
     required PaymentMethod paymentMethod,
     required String customerPhone,
     int pointsRedeemed = 0,
+    Map<String, dynamic>? metadata,
   }) async {
     final selection = _ref.read(seatSelectionProvider);
     final cinemaId = selection.hallId;
@@ -128,6 +129,7 @@ class OrdersNotifier extends StateNotifier<List<OrderModel>> {
         displayId: displayId,
         authUserId: auth.isDemo ? null : userId,
         customerProfileId: auth.isDemo ? userId : null,
+        metadata: metadata,
       );
       
       // Handle Loyalty Transaction atomically in DB

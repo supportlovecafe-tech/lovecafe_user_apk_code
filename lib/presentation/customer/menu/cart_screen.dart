@@ -349,11 +349,15 @@ class CartScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildSummary(BuildContext context, WidgetRef ref, double total) {
+  Widget _buildSummary(BuildContext context, WidgetRef ref, double subtotal) {
     final seatSelection = ref.watch(seatSelectionProvider);
+    final cartNotifier = ref.watch(cartProvider.notifier);
     final colorScheme = Theme.of(context).colorScheme;
-    const serviceFee = 4.5;
-    final grandTotal = total + serviceFee;
+    
+    final cgst = cartNotifier.cgst;
+    final sgst = cartNotifier.sgst;
+    final platformCharges = cartNotifier.platformCharges;
+    final total = cartNotifier.totalAmount;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
@@ -373,14 +377,18 @@ class CartScreen extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _summaryRow('Subtotal', '₹${total.toStringAsFixed(2)}'),
-            const SizedBox(height: 12),
-            _summaryRow('Service Fee', '₹${serviceFee.toStringAsFixed(2)}'),
+            _summaryRow('Subtotal', '₹${subtotal.toStringAsFixed(2)}'),
+            const SizedBox(height: 8),
+            _summaryRow('CGST (2.5%)', '₹${cgst.toStringAsFixed(2)}'),
+            const SizedBox(height: 8),
+            _summaryRow('SGST (2.5%)', '₹${sgst.toStringAsFixed(2)}'),
+            const SizedBox(height: 8),
+            _summaryRow('Platform Fee (1%)', '₹${platformCharges.toStringAsFixed(2)}'),
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: 20),
+              padding: EdgeInsets.symmetric(vertical: 16),
               child: Divider(height: 1),
             ),
-            _summaryRow('Grand Total', '₹${grandTotal.toStringAsFixed(2)}',
+            _summaryRow('Grand Total', '₹${total.toStringAsFixed(2)}',
                 isMain: true),
             const SizedBox(height: 32),
             ElevatedButton(
