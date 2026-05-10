@@ -19,6 +19,9 @@ import '../menu/widgets/location_popup.dart';
 import '../../shared/widgets/custom_bottom_nav_bar.dart';
 import '../../shared/widgets/safe_network_image.dart';
 import '../../shared/widgets/food_item_card.dart';
+import '../../../core/providers/combo_provider.dart';
+import '../../../core/providers/reorder_provider.dart';
+import '../../../core/models/combo_model.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -203,6 +206,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             item.description.toLowerCase().contains(query);
       }).toList();
     }
+    final reorderState = ref.watch(reorderProvider);
+    final comboState = ref.watch(comboProvider);
 
     return Scaffold(
       backgroundColor: colorScheme.background,
@@ -219,10 +224,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 _buildSearchBar(context),
                 _buildRewardsBanner(context, selection),
                 _buildQuickCategoryStrip(context, menu, selectedCategory),
+                if (reorderState.suggestions.isNotEmpty) ...[
+                  _buildSectionHeader(context, 'ORDER AGAIN', 'Pick up where you left off'),
+                  _buildOrderAgainSection(context, reorderState.suggestions),
+                ],
                 _buildSectionHeader(context, 'POPULAR', 'Trending now'),
                 _buildHorizontalProducts(context, hallMenu),
-                _buildSectionHeader(context, 'KING DEALS', 'Premium cinema combos'),
-                _buildComboCarousel(context, hallMenu),
+                if (comboState.items.isNotEmpty) ...[
+                  _buildSectionHeader(context, 'KING DEALS', 'Premium cinema combos & savings'),
+                  _buildComboOffersSection(context, comboState.items),
+                ],
               ],
               const SliverToBoxAdapter(child: SizedBox(height: 120)),
             ],
@@ -645,67 +656,95 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildComboCarousel(BuildContext context, List<FoodItem> items) {
-    final combos = items.where((i) => i.category.toLowerCase().contains('combo') || i.category.toLowerCase().contains('meal')).toList();
-    if (combos.isEmpty) return const SliverToBoxAdapter(child: SizedBox());
-    
+  Widget _buildOrderAgainSection(BuildContext context, List<ReorderSuggestion> suggestions) {
     return SliverToBoxAdapter(
       child: SizedBox(
-        height: 180,
-        child: PageView.builder(
-          controller: PageController(viewportFraction: 0.85),
+        height: 280,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: suggestions.length,
+          itemBuilder: (context, index) {
+            final suggestion = suggestions[index];
+            final item = suggestion.toFoodItem();
+            return Container(
+              width: 200,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              child: FoodItemCard(
+                id: item.id,
+                name: item.name,
+                imageUrl: item.imageUrl,
+                price: item.price,
+                onTap: () => context.push('/food-detail', extra: item),
+                onAdd: () {
+                  ref.read(cartProvider.notifier).validateAndAddItem(item, ref.read(seatSelectionProvider).hallId);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${item.name} added to cart'),
+                      behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildComboOffersSection(BuildContext context, List<ComboMeal> combos) {
+    return SliverToBoxAdapter(
+      child: SizedBox(
+        height: 280,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           itemCount: combos.length,
           itemBuilder: (context, index) {
             final combo = combos[index];
+            // Map ComboMeal to a format FoodItemCard can use for display
             return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
-                color: Colors.white,
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)],
-              ),
-              child: Row(
-                children: [
-                   ClipRRect(
-                     borderRadius: const BorderRadius.horizontal(left: Radius.circular(24)),
-                     child: SafeNetworkImage(imageUrl: combo.imageUrl, width: 120, height: 180, fit: BoxFit.cover),
-                   ),
-                   Expanded(
-                     child: Padding(
-                       padding: const EdgeInsets.all(16.0),
-                       child: Column(
-                         crossAxisAlignment: CrossAxisAlignment.start,
-                         mainAxisAlignment: MainAxisAlignment.center,
-                         children: [
-                           Text(combo.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                           const SizedBox(height: 4),
-                           Text(combo.description, maxLines: 2, style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.5))),
-                           const Spacer(),
-                           Row(
-                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                             children: [
-                               Text('₹${combo.price}', style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.w900)),
-                               IconButton(
-                                 onPressed: () {
-                                   ref.read(cartProvider.notifier).validateAndAddItem(combo, ref.read(seatSelectionProvider).hallId);
-                                   ScaffoldMessenger.of(context).showSnackBar(
-                                     SnackBar(
-                                       content: Text('${combo.name} added to cart'),
-                                       behavior: SnackBarBehavior.floating,
-                                       duration: const Duration(seconds: 1),
-                                     ),
-                                   );
-                                 },
-                                 icon: const Icon(Icons.add_circle, color: AppColors.primary),
-                                 splashRadius: 24,
-                               ),
-                             ],
-                           ),
-                         ],
-                       ),
-                     ),
-                   ),
-                ],
+              width: 200,
+              margin: const EdgeInsets.symmetric(horizontal: 8),
+              child: FoodItemCard(
+                id: combo.id,
+                name: combo.name,
+                imageUrl: combo.imageUrl,
+                price: combo.price,
+                originalPrice: combo.originalPrice,
+                savingsLabel: combo.savingsLabel,
+                onTap: () {
+                  // Push to detail with a dummy food item created from combo
+                  final foodItem = FoodItem(
+                    id: combo.id,
+                    name: combo.name,
+                    description: combo.description,
+                    imageUrl: combo.imageUrl,
+                    price: combo.price,
+                    category: combo.category,
+                  );
+                  context.push('/food-detail', extra: foodItem);
+                },
+                onAdd: () {
+                  final foodItem = FoodItem(
+                    id: combo.id,
+                    name: combo.name,
+                    description: combo.description,
+                    imageUrl: combo.imageUrl,
+                    price: combo.price,
+                    category: combo.category,
+                  );
+                  ref.read(cartProvider.notifier).validateAndAddItem(foodItem, ref.read(seatSelectionProvider).hallId);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${combo.name} added to cart'),
+                      behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                },
               ),
             );
           },

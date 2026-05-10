@@ -120,7 +120,13 @@ class AuthService {
   }
 
   Future<void> signOut() async {
-    await client.auth.signOut();
+    try {
+      // Real Supabase auth users: properly invalidates the session token
+      await client.auth.signOut();
+    } catch (_) {
+      // Demo bypass users have no real Supabase Auth session — swallow the error.
+      // The caller (AuthNotifier.logout) handles all state clearing.
+    }
   }
 
   Future<bool> signInWithGoogle() async {

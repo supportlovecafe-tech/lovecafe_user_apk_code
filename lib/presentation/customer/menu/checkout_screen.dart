@@ -28,17 +28,18 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final cart = ref.watch(cartProvider);
+    final cartState = ref.watch(cartProvider);
+    final cartItems = cartState.items;
+    final breakdown = cartState.breakdown;
     final seatSelection = ref.watch(seatSelectionProvider);
     final auth = ref.watch(authProvider);
     final loyalty = ref.watch(loyaltyProvider);
-
-    final cartNotifier = ref.watch(cartProvider.notifier);
-    final subtotal = cartNotifier.subtotal;
-    final cgst = cartNotifier.cgst;
-    final sgst = cartNotifier.sgst;
-    final platformFee = cartNotifier.platformCharges;
-    final baseTotal = cartNotifier.totalAmount;
+    
+    final subtotal = breakdown.subtotal;
+    final cgst = breakdown.cgst;
+    final sgst = breakdown.sgst;
+    final platformFee = breakdown.platformCharges;
+    final baseTotal = breakdown.total;
     
     // Loyalty Logic
     final maxRedeemablePoints = loyalty.availablePoints;
@@ -87,7 +88,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             const SizedBox(height: 32),
             
             _buildSectionTitle('Order Summary'),
-            _buildOrderItems(cart),
+            _buildOrderItems(cartItems),
+            if (cartState.isValidating)
+               const Padding(
+                 padding: EdgeInsets.symmetric(vertical: 8),
+                 child: Row(children: [SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2)), SizedBox(width: 8), Text('Validating prices...', style: TextStyle(fontSize: 12, opacity: 0.6))]),
+               ),
             const SizedBox(height: 32),
 
             if (auth.status == AuthStatus.AUTHENTICATED) ...[
@@ -171,15 +177,55 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   Widget _buildOrderItems(List<CartItem> cart) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Column(
       children: cart.map((item) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        child: Row(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${item.quantity}x', style: TextStyle(fontWeight: FontWeight.w900, color: AppColors.primary, fontSize: 14)),
-            const SizedBox(width: 12),
-            Expanded(child: Text(item.foodItem.name, style: const TextStyle(fontWeight: FontWeight.w600))),
-            Text('₹${(item.foodItem.price * item.quantity).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+            Row(
+              children: [
+                // Combo badge or quantity
+                if (item.isCombo)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Color(0xFFFF6B35), Color(0xFFFF2D55)]),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Text('COMBO', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                  )
+                else
+                  Text('${item.quantity}x', style: TextStyle(fontWeight: FontWeight.w900, color: AppColors.primary, fontSize: 14)),
+                const SizedBox(width: 8),
+                Expanded(child: Text(item.foodItem.name, style: const TextStyle(fontWeight: FontWeight.w600))),
+                Text('₹${(item.foodItem.price * item.quantity).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              ],
+            ),
+            // Feature 1: Show item note if present
+            if (item.note != null && item.note!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 6, left: 2),
+                child: Row(
+                  children: [
+                    Icon(Icons.notes_rounded, size: 12, color: colorScheme.onSurface.withOpacity(0.4)),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        item.note!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: colorScheme.onSurface.withOpacity(0.55),
+                          fontStyle: FontStyle.italic,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       )).toList(),
@@ -296,8 +342,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
       decoration: BoxDecoration(color: colorScheme.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(32))),
       child: PrimaryButton(
-        text: _isLoading ? 'PROCESSING...' : 'PAY ₹${grandTotal.toStringAsFixed(0)}',
-        onPressed: _isLoading ? null : () => _processPayment(grandTotal, pointsToRedeem),
+        text: _isLoading ? 'PROCESSING...' : (grandTotal == 0 ? 'PLACE ORDER' : 'PAY ₹${grandTotal.toStringAsFixed(0)}'),
+        onPressed: (_isLoading || ref.watch(cartProvider).isValidating) ? null : () => _processPayment(grandTotal, pointsToRedeem),
       ),
     );
   }
@@ -352,9 +398,23 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     
     try {
       final cart = ref.read(cartProvider);
+      final cartNotifier = ref.read(cartProvider.notifier);
       final auth = ref.read(authProvider);
 
-      final orderItems = cart.map((item) => OrderItem(foodItem: item.foodItem, quantity: item.quantity)).toList();
+      final subtotal = cartNotifier.subtotal;
+      final cgst = cartNotifier.cgst;
+      final sgst = cartNotifier.sgst;
+      final platformFee = cartNotifier.platformCharges;
+
+      // Feature 1+2: Include note, isCombo, comboId, comboName in each OrderItem
+      final orderItems = cart.map((item) => OrderItem(
+        foodItem: item.foodItem,
+        quantity: item.quantity,
+        note: item.note,
+        isCombo: item.isCombo,
+        comboId: item.comboId,
+        comboName: item.comboName,
+      )).toList();
 
       await ref.read(ordersProvider.notifier).placeOrder(
         orderItems,

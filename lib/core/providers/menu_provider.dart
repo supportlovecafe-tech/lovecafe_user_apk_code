@@ -1,7 +1,12 @@
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/food_item.dart';
 import 'supabase_provider.dart';
 import 'auth_provider.dart';
+import '../services/cache_service.dart';
+import '../services/supabase_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
+import 'cart_provider.dart';
 
 
 class MenuState {
@@ -34,53 +39,116 @@ class MenuNotifier extends StateNotifier<MenuState> {
         state = const MenuState();
       }
     });
+    _initializeRealtime();
+  }
+
+  RealtimeChannel? _menuChannel;
+
+  void _initializeRealtime() {
+    _menuChannel = Supabase.instance.client
+        .channel('public:menu_changes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'food_items',
+          callback: (payload) {
+            final updated = FoodItem.fromMap(payload.newRecord);
+            print('🔔 Realtime Menu Update: ${updated.name} (Available: ${updated.isAvailable})');
+            _updateItemAvailability(updated.id, updated.isAvailable);
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'combos',
+          callback: (payload) {
+            final updatedId = payload.newRecord['id'].toString();
+            final isAvailable = payload.newRecord['is_available'] as bool;
+            print('🔔 Realtime Combo Update: $updatedId (Available: $isAvailable)');
+            _updateComboAvailability(updatedId, isAvailable);
+          },
+        )
+        .subscribe();
+  }
+
+  void _updateItemAvailability(String id, bool isAvailable) {
+    state = state.copyWith(items: [
+      for (final item in state.items)
+        if (item.id == id) item.copyWith(isAvailable: isAvailable) else item,
+    ]);
+    // Check cart
+    _ref.read(cartProvider.notifier).validateAvailability(state.items);
+  }
+
+  void _updateComboAvailability(String comboId, bool isAvailable) {
+    // Note: This logic assumes we might need to update state if we had a combos list
+    // For now, primarily trigger cart validation
+    _ref.read(cartProvider.notifier).validateAvailability(state.items);
+  }
+
+  @override
+  void dispose() {
+    if (_menuChannel != null) Supabase.instance.client.removeChannel(_menuChannel!);
+    super.dispose();
   }
 
   Future<void> refreshMenu(String cinemaId) async {
-    print('🚨 MENU REFRESH TRIGGERED FOR CINEMA: $cinemaId');
     if (cinemaId.isEmpty) return;
-    state = state.copyWith(isLoading: true, items: []);
+
+    // 1. Try Loading from Cache first (Instant UI)
+    final cachedData = await cacheService.getCachedMenu(cinemaId);
+    if (cachedData != null) {
+      final cachedItems = cachedData.map((item) => FoodItem.fromMap(item)).toList();
+      state = state.copyWith(items: cachedItems, isLoading: false);
+      print('📦 Menu loaded from CACHE for $cinemaId');
+    } else {
+      state = state.copyWith(isLoading: true);
+    }
+
+    // 2. Revalidate from Network in background
     try {
       final supabase = _ref.read(supabaseServiceProvider);
-      final items = await supabase.fetchMenu(cinemaId);
-      state = state.copyWith(items: items);
-    } catch (e) {
-      print('Error fetching menu for $cinemaId: $e');
-      state = state.copyWith(items: []);
-    } finally {
-      if (state.items.isEmpty) {
-        // Fallback to mock data for demo purposes if DB is empty
-        state = state.copyWith(
-          items: [
-            FoodItem(
-              id: 'mock-1',
-              name: 'Signature Popcorn',
-              description: 'Classic buttered popcorn',
-              price: 250,
-              imageUrl: 'https://images.unsplash.com/photo-1572177191856-3cde618dee1f?w=400',
-              category: 'POPCORN',
-            ),
-            FoodItem(
-              id: 'mock-2',
-              name: 'Gourmet Nachos',
-              description: 'Loaded with cheese and jalapenos',
-              price: 350,
-              imageUrl: 'https://images.unsplash.com/photo-1513456852971-30c0b8199d4d?w=400',
-              category: 'SNACKS',
-            ),
-            FoodItem(
-              id: 'mock-3',
-              name: 'Cool Blue Mojito',
-              description: 'Refreshing summer drink',
-              price: 180,
-              imageUrl: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=400',
-              category: 'BEVERAGES',
-            ),
-          ],
-        );
+      final newItems = await supabase.fetchMenu(cinemaId);
+      final List rawData = newItems.map((i) => i.toMap()).toList();
+
+      // 3. Only update state if data actually changed to avoid flicker
+      if (_hasDataChanged(cachedData, rawData)) {
+        state = state.copyWith(items: newItems, isLoading: false);
+        await cacheService.cacheMenu(cinemaId, rawData);
+        print('🌐 Menu updated from NETWORK (via API) for $cinemaId');
       }
-      state = state.copyWith(isLoading: false);
+    } catch (e) {
+      print('Error revalidating menu for $cinemaId: $e');
+      if (state.items.isEmpty) {
+        state = state.copyWith(items: _getMockData(), isLoading: false);
+      }
     }
+  }
+
+  bool _hasDataChanged(dynamic cached, dynamic fresh) {
+    if (cached == null) return true;
+    return jsonEncode(cached) != jsonEncode(fresh);
+  }
+
+  List<FoodItem> _getMockData() {
+    return [
+      FoodItem(
+        id: 'mock-1',
+        name: 'Signature Popcorn',
+        description: 'Classic buttered popcorn',
+        price: 250,
+        imageUrl: 'https://images.unsplash.com/photo-1572177191856-3cde618dee1f?w=400',
+        category: 'POPCORN',
+      ),
+      FoodItem(
+        id: 'mock-2',
+        name: 'Gourmet Nachos',
+        description: 'Loaded with cheese and jalapenos',
+        price: 350,
+        imageUrl: 'https://images.unsplash.com/photo-1513456852971-30c0b8199d4d?w=400',
+        category: 'SNACKS',
+      ),
+    ];
   }
 
   Future<void> addItem(FoodItem item) async {

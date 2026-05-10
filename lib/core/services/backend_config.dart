@@ -7,6 +7,7 @@ class BackendConfig {
   static const String supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: _hardcodedAnonKey);
   static const String razorpayKeyId = String.fromEnvironment('RAZORPAY_KEY_ID');
   static const String adminPhoneList = String.fromEnvironment('ADMIN_PHONES');
+  static const String backendApiUrl = String.fromEnvironment('BACKEND_API_URL', defaultValue: 'http://localhost:3000');
 
   static bool get isSupabaseConfigured {
     final configured = supabaseUrl.isNotEmpty && 

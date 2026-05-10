@@ -478,49 +478,89 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
             final isItemDelivered = item.isDelivered;
             return Padding(
                 padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (isItemDelivered)
-                      Container(
-                        margin: const EdgeInsets.only(right: 12),
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
-                          shape: BoxShape.circle,
+                    Row(
+                      children: [
+                        if (isItemDelivered)
+                          Container(
+                            margin: const EdgeInsets.only(right: 12),
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.check_circle_rounded, color: Colors.green, size: 16),
+                          ),
+                        // Feature 2: combo badge
+                        if (item.isCombo)
+                          Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(colors: [Color(0xFFFF6B35), Color(0xFFFF2D55)]),
+                              borderRadius: BorderRadius.circular(5),
+                            ),
+                            child: const Text('COMBO', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                          )
+                        else
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: isItemDelivered ? Colors.green.withOpacity(0.1) : colorScheme.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              '${item.quantity}x',
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: isItemDelivered ? Colors.green : colorScheme.primary,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            item.foodItem.name,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: isItemDelivered ? Colors.green : null,
+                            ),
+                          ),
                         ),
-                        child: const Icon(Icons.check_circle_rounded, color: Colors.green, size: 16),
-                      ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: isItemDelivered ? Colors.green.withOpacity(0.1) : colorScheme.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        '${item.quantity}x',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: isItemDelivered ? Colors.green : colorScheme.primary,
-                          fontWeight: FontWeight.w900,
+                        Text(
+                          '₹${(item.foodItem.price * item.quantity).toInt()}',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            color: isItemDelivered ? Colors.green : null,
+                          ),
+                        ),
+                      ],
+                    ),
+                    // Feature 1: Show item note if present
+                    if (item.note != null && item.note!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 4),
+                        child: Row(
+                          children: [
+                            Icon(Icons.notes_rounded, size: 11, color: colorScheme.onSurface.withOpacity(0.35)),
+                            const SizedBox(width: 5),
+                            Expanded(
+                              child: Text(
+                                item.note!,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  fontSize: 11,
+                                  color: colorScheme.onSurface.withOpacity(0.5),
+                                  fontStyle: FontStyle.italic,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        item.foodItem.name,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: isItemDelivered ? Colors.green : null,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '₹${(item.foodItem.price * item.quantity).toInt()}',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        color: isItemDelivered ? Colors.green : null,
-                      ),
-                    ),
                   ],
                 ),
               );

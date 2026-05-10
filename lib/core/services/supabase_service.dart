@@ -1,9 +1,18 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:dio/dio.dart';
+import 'backend_config.dart';
 import '../models/food_item.dart';
 import '../models/cinema_hall.dart';
+import '../models/combo_model.dart';
+import '../providers/reorder_provider.dart';
 
 class SupabaseService {
-  SupabaseClient get _client => Supabase.instance.client;
+  final _client = Supabase.instance.client;
+  final _dio = Dio(BaseOptions(
+    baseUrl: BackendConfig.backendApiUrl,
+    connectTimeout: const Duration(seconds: 10),
+    receiveTimeout: const Duration(seconds: 10),
+  ));
 
   // --- Cinemas (Tenants) ---
   
@@ -19,33 +28,54 @@ class SupabaseService {
 
   Future<List<FoodItem>> fetchMenu(String cinemaId) async {
     if (cinemaId.isEmpty) return [];
-    
     try {
-      print('Fetching menu for cinemaId: $cinemaId');
+      final response = await _dio.get('/api/menu', queryParameters: {'cinemaId': cinemaId});
+      final List data = response.data as List;
+      return data.map((item) => FoodItem.fromMap(item)).toList();
+    } catch (e) {
+      print('Error fetching menu via API, falling back to Supabase: $e');
       final response = await _client
           .from('food_items')
           .select('*')
-          .eq('cinema_id', cinemaId);
-      
-      if (response == null) {
-        print('fetchMenu: Response is null');
-        return [];
-      }
-      
-      final List data = response as List;
-      print('fetchMenu SUCCESS: Found ${data.length} items for cinema $cinemaId');
-      if (data.isNotEmpty) {
-        print('First item sample: ${data.first}');
-      }
-      
-      return data.map((item) => FoodItem.fromMap(item)).toList();
+          .eq('cinema_id', cinemaId)
+          .eq('is_available', true);
+      return (response as List).map((data) => FoodItem.fromMap(data)).toList();
+    }
+  }
+
+  // --- Combos (Feature 2) ---
+
+  Future<List<ComboMeal>> fetchCombos(String cinemaId) async {
+    if (cinemaId.isEmpty) return [];
+    try {
+      final response = await _dio.get('/api/combos', queryParameters: {'cinemaId': cinemaId});
+      final List data = response.data as List;
+      return data.map((item) => ComboMeal.fromMap(item)).toList();
     } catch (e) {
-      print('SupabaseService.fetchMenu error: $e');
-      return [];
+      print('Error fetching combos via API, falling back to Supabase: $e');
+      final response = await _client
+          .from('combos')
+          .select('*, combo_items(*)')
+          .eq('cinema_id', cinemaId)
+          .eq('is_available', true);
+      return (response as List).map((data) => ComboMeal.fromMap(data)).toList();
     }
   }
 
   // --- Orders ---
+
+  Future<Map<String, dynamic>> validateOrder(List<Map<String, dynamic>> items, String? cinemaId) async {
+    try {
+      final response = await _dio.post('/api/orders/validate', data: {
+        'items': items,
+        'cinema_id': cinemaId,
+      });
+      return response.data as Map<String, dynamic>;
+    } catch (e) {
+      print('SupabaseService.validateOrder error: $e');
+      rethrow;
+    }
+  }
 
   Future<String> placeOrder({
     required String cinemaId,
@@ -54,22 +84,28 @@ class SupabaseService {
     required String location,
     required String customerPhone,
     required String displayId,
+    int? pointsRedeemed,
+    int? pointsEarned,
     String? authUserId,
     String? customerProfileId,
+    String? clientUuid,
     Map<String, dynamic>? metadata,
   }) async {
     final orderData = {
       'cinema_id': cinemaId,
-      'display_id': displayId, // Correctly using the passed client-side ID
+      'display_id': displayId,
       'items': items,
       'total_amount': totalAmount,
       'location': "APK, ${location.replaceAll(' • ', ', ')}",
       'customer_phone': customerPhone,
+      'points_redeemed': pointsRedeemed ?? 0,
+      'points_earned': pointsEarned ?? 0,
       'status': 'PENDING',
       'payment_status': 'PAID',
       'payment_method': 'DEMO_UPI',
       'timestamp': DateTime.now().toUtc().toIso8601String(),
       'is_demo_order': true,
+      'client_uuid': clientUuid,
       'metadata': metadata,
     };
 
@@ -84,10 +120,32 @@ class SupabaseService {
     }
 
     try {
-      final response = await _client.from('orders').insert(orderData).select('id').single();
-      return response['id'].toString();
+      print('Calling Backend API for Order: ${BackendConfig.backendApiUrl}/api/orders/create');
+      
+      final response = await _dio.post(
+        '/api/orders/create',
+        data: orderData,
+        options: Options(
+          headers: {
+            'x-idempotency-key': clientUuid ?? displayId,
+          },
+        ),
+      );
+
+      if (response.statusCode == 202 || response.statusCode == 200) {
+        print('Backend Order Success: ${response.data}');
+        // Note: The backend returns the idempotency key or a success msg
+        // The actual order is processed asynchronously via Redis queue.
+        // We return the displayId or a dummy ID to keep the Flutter UI happy
+        // until realtime updates the state.
+        return displayId; 
+      }
+      throw Exception('Failed to place order: ${response.data}');
     } catch (e) {
-      print('SupabaseService.placeOrder error: $e');
+      print('SupabaseService.placeOrder ERROR: $e');
+      if (e is DioException) {
+        print('Dio Details: ${e.response?.data}');
+      }
       rethrow;
     }
   }
@@ -112,6 +170,7 @@ class SupabaseService {
   }
 
   Future<List<Map<String, dynamic>>> fetchOrders({String? cinemaId, String? customerId, String? customerPhone}) async {
+    // Build the base filter query first, THEN apply ordering
     var query = _client.from('orders').select('*');
     
     if (cinemaId != null) {
@@ -144,6 +203,98 @@ class SupabaseService {
     }
   }
 
+  // --- Feature 3: Reorder Suggestions ---
+
+  Future<List<ReorderSuggestion>> fetchReorderSuggestions({
+    required String cinemaId,
+    String? customerId,
+    String? customerPhone,
+  }) async {
+    if (customerId == null && customerPhone == null) return [];
+    try {
+      final response = await _dio.get('/api/recommendations', queryParameters: {
+        'cinemaId': cinemaId,
+        'userId': customerId ?? 'GUEST',
+        'phone': customerPhone ?? 'NA',
+      });
+      final List data = response.data as List;
+      return data.map<ReorderSuggestion>((item) => ReorderSuggestion(
+        foodId: item['food_id']?.toString() ?? '',
+        name: item['food_name']?.toString() ?? '',
+        imageUrl: item['food_image']?.toString() ?? '',
+        price: (item['food_price'] as num?)?.toDouble() ?? 0,
+        category: item['food_category']?.toString() ?? '',
+        orderCount: item['count'] as int? ?? 1,
+      )).toList();
+    } catch (e) {
+      print('Error fetching recommendations via API, falling back to Supabase: $e');
+      // Fallback to existing direct query logic
+      var query = _client
+          .from('orders')
+          .select('items, timestamp')
+          .eq('cinema_id', cinemaId)
+          .neq('status', 'CANCELLED');
+
+      if (customerId != null && customerPhone != null) {
+        query = query.or('customer_id.eq.$customerId,customer_phone.eq.$customerPhone');
+      } else if (customerId != null) {
+        query = query.eq('customer_id', customerId);
+      } else if (customerPhone != null) {
+        query = query.eq('customer_phone', customerPhone);
+      }
+
+      final response = await query
+          .order('timestamp', ascending: false)
+          .limit(30);
+      final orders = List<Map<String, dynamic>>.from(response);
+
+      // Aggregate items by food_id with frequency + recency weighting
+      final Map<String, _ItemAggregate> aggregates = {};
+      for (int orderIdx = 0; orderIdx < orders.length; orderIdx++) {
+        final order = orders[orderIdx];
+        final rawItems = order['items'] as List<dynamic>? ?? [];
+        final recencyWeight = orders.length - orderIdx; // more recent = higher weight
+
+        for (final rawItem in rawItems) {
+          final item = rawItem as Map<String, dynamic>;
+          final foodId = item['food_id']?.toString() ?? '';
+          if (foodId.isEmpty || foodId.startsWith('mock-') || item['is_combo'] == true) continue;
+
+          if (aggregates.containsKey(foodId)) {
+            aggregates[foodId]!.count++;
+            aggregates[foodId]!.score += recencyWeight;
+          } else {
+            aggregates[foodId] = _ItemAggregate(
+              foodId: foodId,
+              name: item['food_name']?.toString() ?? '',
+              imageUrl: item['food_image']?.toString() ?? '',
+              price: (item['food_price'] as num?)?.toDouble() ?? 0,
+              category: item['food_category']?.toString() ?? '',
+              count: 1,
+              score: recencyWeight.toDouble(),
+            );
+          }
+        }
+      }
+
+      // Sort by score (recency × frequency), take top 5
+      final sorted = aggregates.values.toList()
+        ..sort((a, b) => b.score.compareTo(a.score));
+
+      return sorted.take(5).map<ReorderSuggestion>((agg) => ReorderSuggestion(
+        foodId: agg.foodId,
+        name: agg.name,
+        imageUrl: agg.imageUrl,
+        price: agg.price,
+        category: agg.category,
+        orderCount: agg.count,
+      )).toList();
+    } catch (e) {
+      print('SupabaseService.fetchReorderSuggestions error: $e');
+      return [];
+    }
+  }
+
   // --- Real-time Subscription ---
   
   RealtimeChannel subscribeToOrders(String cinemaId, void Function(Map<String, dynamic>) onChange) {
@@ -166,6 +317,27 @@ class SupabaseService {
         )
         .subscribe();
   }
+}
+
+/// Internal aggregation helper
+class _ItemAggregate {
+  final String foodId;
+  final String name;
+  final String imageUrl;
+  final double price;
+  final String category;
+  int count;
+  double score;
+
+  _ItemAggregate({
+    required this.foodId,
+    required this.name,
+    required this.imageUrl,
+    required this.price,
+    required this.category,
+    required this.count,
+    required this.score,
+  });
 }
 
 final supabaseService = SupabaseService();

@@ -340,21 +340,27 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildLogoutButton(BuildContext context, ThemeData theme, ColorScheme colorScheme, WidgetRef ref) {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       child: OutlinedButton.icon(
-        onPressed: () async { 
-          await ref.read(authProvider.notifier).logout(); 
-          if (context.mounted) {
-            context.go('/welcome');
+        onPressed: () async {
+          try {
+            await ref.read(authProvider.notifier).logout();
+          } catch (e) {
+            debugPrint('Logout error (non-fatal): $e');
+          } finally {
+            // Always navigate to welcome, even if logout partially failed
+            if (context.mounted) {
+              context.go('/welcome');
+            }
           }
         },
         icon: const Icon(Icons.logout_rounded, size: 20),
         label: Text('SIGN OUT', style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900, letterSpacing: 2)),
         style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 24), 
-          foregroundColor: colorScheme.error, 
-          side: BorderSide(color: colorScheme.error.withOpacity(0.2)), 
+          padding: const EdgeInsets.symmetric(vertical: 24),
+          foregroundColor: colorScheme.error,
+          side: BorderSide(color: colorScheme.error.withOpacity(0.2)),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         ),
       ),

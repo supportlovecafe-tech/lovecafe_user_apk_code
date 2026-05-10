@@ -17,6 +17,8 @@ class OrderModel {
   final String customerPhone;
   final int? pointsEarned;
   final int? pointsRedeemed;
+  final String? clientUuid;
+  final bool isSyncing;
 
   OrderModel({
     required this.id,
@@ -31,6 +33,8 @@ class OrderModel {
     required this.customerPhone,
     this.pointsEarned,
     this.pointsRedeemed,
+    this.clientUuid,
+    this.isSyncing = false,
   });
 
   OrderModel copyWith({
@@ -43,9 +47,9 @@ class OrderModel {
     String? location,
     PaymentStatus? paymentStatus,
     PaymentMethod? paymentMethod,
-    String? customerPhone,
-    int? pointsEarned,
     int? pointsRedeemed,
+    String? clientUuid,
+    bool? isSyncing,
   }) {
     return OrderModel(
       id: id ?? this.id,
@@ -60,6 +64,8 @@ class OrderModel {
       customerPhone: customerPhone ?? this.customerPhone,
       pointsEarned: pointsEarned ?? this.pointsEarned,
       pointsRedeemed: pointsRedeemed ?? this.pointsRedeemed,
+      clientUuid: clientUuid ?? this.clientUuid,
+      isSyncing: isSyncing ?? this.isSyncing,
     );
   }
 
@@ -77,6 +83,8 @@ class OrderModel {
       'customer_phone': customerPhone,
       'points_earned': pointsEarned,
       'points_redeemed': pointsRedeemed,
+      'client_uuid': clientUuid,
+      'is_syncing': isSyncing,
     };
   }
 
@@ -101,6 +109,10 @@ class OrderModel {
           ),
           quantity: (row['quantity'] as num?)?.toInt() ?? 1,
           isDelivered: row['is_delivered'] == true,
+          note: row['item_note']?.toString(),           // Feature 1: item note
+          isCombo: row['is_combo'] == true,             // Feature 2: combo flag
+          comboId: row['combo_id']?.toString(),         // Feature 2: combo id
+          comboName: row['combo_name']?.toString(),     // Feature 2: combo name
         );
       }).toList(),
       totalAmount: (map['total_amount'] as num?)?.toDouble() ?? 0,
@@ -121,6 +133,8 @@ class OrderModel {
       customerPhone: map['customer_phone']?.toString() ?? 'NA',
       pointsEarned: map['points_earned'] as int?,
       pointsRedeemed: map['points_redeemed'] as int?,
+      clientUuid: map['client_uuid']?.toString(),
+      isSyncing: map['is_syncing'] == true,
     );
   }
 }
@@ -129,8 +143,20 @@ class OrderItem {
   final FoodItem foodItem;
   final int quantity;
   final bool isDelivered;
+  final String? note;       // Feature 1: custom cooking/serving instruction
+  final bool isCombo;       // Feature 2: true if this item is part of a combo
+  final String? comboId;    // Feature 2: combo UUID
+  final String? comboName;  // Feature 2: combo display name
 
-  OrderItem({required this.foodItem, required this.quantity, this.isDelivered = false});
+  OrderItem({
+    required this.foodItem,
+    required this.quantity,
+    this.isDelivered = false,
+    this.note,
+    this.isCombo = false,
+    this.comboId,
+    this.comboName,
+  });
 
   Map<String, dynamic> toMap() {
     return {
@@ -142,6 +168,10 @@ class OrderItem {
       'food_category': foodItem.category,
       'quantity': quantity,
       'is_delivered': isDelivered,
+      if (note != null && note!.isNotEmpty) 'item_note': note,   // Feature 1
+      if (isCombo) 'is_combo': true,                             // Feature 2
+      if (comboId != null) 'combo_id': comboId,                  // Feature 2
+      if (comboName != null) 'combo_name': comboName,            // Feature 2
     };
   }
 }

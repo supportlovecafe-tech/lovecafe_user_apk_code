@@ -47,3 +47,6 @@ ios/Flutter/flutter_export_environment.sh
 *.zip
 test_clone/
 node_modules/
+.env*
+*.jks
+*.keystore

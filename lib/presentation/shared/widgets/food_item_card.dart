@@ -10,6 +10,8 @@ class FoodItemCard extends StatefulWidget {
   final String name;
   final String imageUrl;
   final double price;
+  final double? originalPrice;
+  final String? savingsLabel;
   final VoidCallback onAdd;
   final VoidCallback? onTap;
 
@@ -19,6 +21,8 @@ class FoodItemCard extends StatefulWidget {
     required this.name,
     required this.imageUrl,
     required this.price,
+    this.originalPrice,
+    this.savingsLabel,
     required this.onAdd,
     this.onTap,
   });
@@ -81,6 +85,27 @@ class _FoodItemCardState extends State<FoodItemCard> {
                             ),
                           ),
                         ),
+                        if (widget.savingsLabel != null)
+                          Positioned(
+                            bottom: 8,
+                            left: 8,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [AppColors.secondary, AppColors.secondary.withOpacity(0.8)],
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: [
+                                  BoxShadow(color: AppColors.secondary.withOpacity(0.4), blurRadius: 8)
+                                ],
+                              ),
+                              child: Text(
+                                widget.savingsLabel!,
+                                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900),
+                              ),
+                            ),
+                          ),
                         Positioned(
                           top: 8,
                           right: 8,
@@ -135,12 +160,29 @@ class _FoodItemCardState extends State<FoodItemCard> {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Text(
-                                '₹${widget.price.toInt()}',
-                                style: AppTextStyles.priceLarge.copyWith(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w900,
-                                  color: AppColors.primaryLight,
+                              Flexible(
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      '₹${widget.price.toInt()}',
+                                      style: AppTextStyles.priceLarge.copyWith(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w900,
+                                        color: AppColors.primaryLight,
+                                      ),
+                                    ),
+                                    if (widget.originalPrice != null && widget.originalPrice! > widget.price) ...[
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '₹${widget.originalPrice!.toInt()}',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          decoration: TextDecoration.lineThrough,
+                                          color: Colors.white.withOpacity(0.3),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
                                 ),
                               ),
                               _buildAddButton(),

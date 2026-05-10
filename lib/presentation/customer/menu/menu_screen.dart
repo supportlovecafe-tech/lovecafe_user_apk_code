@@ -6,8 +6,10 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/models/food_item.dart';
+import '../../../core/models/combo_model.dart';
 import '../../../core/providers/cart_provider.dart';
 import '../../../core/providers/menu_provider.dart';
+import '../../../core/providers/combo_provider.dart';
 import '../../../core/providers/seat_selection_provider.dart';
 import '../../../core/providers/category_provider.dart';
 import '../../shared/widgets/custom_bottom_nav_bar.dart';
@@ -15,6 +17,9 @@ import '../../shared/widgets/food_item_card.dart';
 import '../../shared/widgets/safe_network_image.dart';
 import '../../../core/providers/theme_provider.dart';
 import 'widgets/location_popup.dart';
+import 'widgets/combo_card.dart';
+import 'widgets/combo_detail_popup.dart';
+import 'widgets/reorder_section.dart';
 
 class MenuScreen extends ConsumerStatefulWidget {
   const MenuScreen({super.key});
@@ -26,6 +31,7 @@ class MenuScreen extends ConsumerStatefulWidget {
 class _MenuScreenState extends ConsumerState<MenuScreen> {
   final List<String> categories = const [
     'All',
+    'Combos',
     'Popcorn',
     'Snacks',
     'Beverages',
@@ -50,6 +56,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
         _showLocationSelection();
       } else {
         ref.read(menuProvider.notifier).refreshMenu(selection.hallId!);
+        ref.read(comboProvider.notifier).loadCombos(selection.hallId!);
       }
     });
   }
@@ -68,6 +75,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                 seatLabel: seat,
               );
           ref.read(menuProvider.notifier).refreshMenu(hallId);
+          ref.read(comboProvider.notifier).loadCombos(hallId);
         },
       ),
     );
@@ -86,7 +94,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
       }).toList();
     }
     
-    if (selectedCategory != null && selectedCategory != 'All') {
+    if (selectedCategory != null && selectedCategory != 'All' && selectedCategory != 'Combos') {
       final matches = categoryMatches[selectedCategory] ?? [];
       result = result.where((food) {
         final cat = (food.category ?? '').toUpperCase();
@@ -97,14 +105,32 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     return result;
   }
 
+  List<ComboMeal> getFilteredCombos(List<ComboMeal> allCombos, String? selectedCategory) {
+    if (selectedCategory == 'All' && _searchQuery.isNotEmpty) {
+      final query = _searchQuery.toLowerCase();
+      return allCombos.where((c) =>
+          c.name.toLowerCase().contains(query) ||
+          c.description.toLowerCase().contains(query)).toList();
+    }
+    return allCombos;
+  }
+
+  bool get _isComboTab => ref.watch(categoryProvider) == 'Combos';
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final selectedCategory = ref.watch(categoryProvider);
     final menuState = ref.watch(menuProvider);
+    final comboState = ref.watch(comboProvider);
     final selection = ref.watch(seatSelectionProvider);
-    final foods = getFilteredFoods(menuState.items, selectedCategory);
+    
+    final showingCombos = selectedCategory == 'Combos';
+    final foods = showingCombos ? <FoodItem>[] : getFilteredFoods(menuState.items, selectedCategory);
+    final combos = showingCombos || selectedCategory == 'All'
+        ? getFilteredCombos(comboState.items, selectedCategory)
+        : <ComboMeal>[];
 
     return Scaffold(
       backgroundColor: colorScheme.background,
@@ -114,10 +140,24 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
           _buildAppBar(context, selection),
           _buildHeader(context, selection),
           _buildSearchBar(context),
+          // Feature 3: Order Again section
+          const ReorderSection(),
           _buildStickyTabs(context, selectedCategory),
-          menuState.isLoading 
-            ? _buildShimmerGrid(context)
-            : _buildGrid(context, foods, selection),
+          // Feature 2: Show combos grid when Combos tab or search in All
+          if (showingCombos)
+            comboState.isLoading
+                ? _buildShimmerGrid(context)
+                : _buildCombosGrid(context, combos, selection)
+          else ...[
+            // Show combos at top when in "All" category
+            if (selectedCategory == 'All' && combos.isNotEmpty)
+              _buildCombosHeader(context),
+            if (selectedCategory == 'All' && combos.isNotEmpty)
+              _buildCombosHorizontalRow(context, combos, selection),
+            menuState.isLoading
+                ? _buildShimmerGrid(context)
+                : _buildGrid(context, foods, selection),
+          ],
           const SliverToBoxAdapter(child: SizedBox(height: 120)),
         ],
       ),
@@ -254,22 +294,31 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
             itemBuilder: (context, index) {
               final cat = categories[index];
               final isSelected = (selectedCategory == null && cat == 'All') || (selectedCategory == cat);
+              final isComboTab = cat == 'Combos';
               
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                 child: ChoiceChip(
-                  label: Text(cat),
+                  label: Text(isComboTab ? '🔥 $cat' : cat),
                   selected: isSelected,
                   onSelected: (val) {
                     ref.read(categoryProvider.notifier).setCategory(cat == 'All' ? null : cat);
                   },
-                  backgroundColor: AppColors.surfaceDark.withOpacity(0.5),
-                  selectedColor: AppColors.primary.withOpacity(0.2),
+                  backgroundColor: isComboTab
+                      ? const Color(0xFFFF6B35).withOpacity(0.08)
+                      : AppColors.surfaceDark.withOpacity(0.5),
+                  selectedColor: isComboTab
+                      ? const Color(0xFFFF6B35).withOpacity(0.25)
+                      : AppColors.primary.withOpacity(0.2),
                   side: BorderSide(
-                    color: isSelected ? AppColors.primary : AppColors.borderDark,
+                    color: isSelected
+                        ? (isComboTab ? const Color(0xFFFF6B35) : AppColors.primary)
+                        : (isComboTab ? const Color(0xFFFF6B35).withOpacity(0.3) : AppColors.borderDark),
                   ),
                   labelStyle: TextStyle(
-                    color: isSelected ? AppColors.primaryLight : Colors.white.withOpacity(0.4),
+                    color: isSelected
+                        ? (isComboTab ? const Color(0xFFFF6B35) : AppColors.primaryLight)
+                        : Colors.white.withOpacity(0.4),
                     fontWeight: isSelected ? FontWeight.w900 : FontWeight.normal,
                     fontSize: 12,
                   ),
@@ -279,6 +328,136 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
             },
           ),
         ),
+      ),
+    );
+  }
+
+  /// Feature 2: "Combo Deals" header shown when All tab has combos
+  Widget _buildCombosHeader(BuildContext context) {
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Color(0xFFFF6B35), Color(0xFFFF2D55)]),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.local_fire_department_rounded, color: Colors.white, size: 14),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Combo Deals',
+              style: AppTextStyles.headingMedium.copyWith(fontSize: 16, fontWeight: FontWeight.w900),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Feature 2: Horizontal combo scroll in "All" tab
+  Widget _buildCombosHorizontalRow(BuildContext context, List<ComboMeal> combos, SeatSelectionState selection) {
+    return SliverToBoxAdapter(
+      child: SizedBox(
+        height: 240,
+        child: ListView.builder(
+          scrollDirection: Axis.horizontal,
+          physics: const BouncingScrollPhysics(),
+          padding: const EdgeInsets.only(left: 20, right: 8),
+          itemCount: combos.length,
+          itemBuilder: (context, index) {
+            final combo = combos[index];
+            return SizedBox(
+              width: 180,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 14, bottom: 4),
+                child: ComboCard(
+                  combo: combo,
+                  onAddToCart: () => _addComboToCart(context, combo, selection),
+                  onViewDetails: () => _showComboDetails(context, combo, selection),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  /// Feature 2: Full grid view for "Combos" tab
+  Widget _buildCombosGrid(BuildContext context, List<ComboMeal> combos, SeatSelectionState selection) {
+    if (combos.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Container(
+          height: 300,
+          alignment: Alignment.center,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.fastfood_rounded, size: 64, color: Colors.grey.withOpacity(0.2)),
+              const SizedBox(height: 16),
+              Text('No combo deals available at this outlet',
+                  style: TextStyle(color: Colors.grey.withOpacity(0.5))),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return SliverPadding(
+      padding: const EdgeInsets.all(20),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          mainAxisSpacing: 20,
+          crossAxisSpacing: 20,
+          childAspectRatio: 0.7,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final combo = combos[index];
+            return ComboCard(
+              combo: combo,
+              onAddToCart: () => _addComboToCart(context, combo, selection),
+              onViewDetails: () => _showComboDetails(context, combo, selection),
+            );
+          },
+          childCount: combos.length,
+        ),
+      ),
+    );
+  }
+
+  void _addComboToCart(BuildContext context, ComboMeal combo, SeatSelectionState selection) {
+    ref.read(cartProvider.notifier).addCombo(combo);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle_rounded, color: Colors.white, size: 18),
+            const SizedBox(width: 8),
+            Text('${combo.name} added to cart!'),
+          ],
+        ),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFFFF6B35),
+        duration: const Duration(seconds: 2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  void _showComboDetails(BuildContext context, ComboMeal combo, SeatSelectionState selection) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => ComboDetailPopup(
+        combo: combo,
+        onAddToCart: () => _addComboToCart(context, combo, selection),
       ),
     );
   }
