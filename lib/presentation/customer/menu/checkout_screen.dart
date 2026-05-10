@@ -92,7 +92,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             if (cartState.isValidating)
                const Padding(
                  padding: EdgeInsets.symmetric(vertical: 8),
-                 child: Row(children: [SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2)), SizedBox(width: 8), Text('Validating prices...', style: TextStyle(fontSize: 12, opacity: 0.6))]),
+                 child: Row(children: [SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2)), SizedBox(width: 8), Text('Validating prices...', style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.6)))]),
                ),
             const SizedBox(height: 32),
 
@@ -407,7 +407,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       final platformFee = cartNotifier.platformCharges;
 
       // Feature 1+2: Include note, isCombo, comboId, comboName in each OrderItem
-      final orderItems = cart.map((item) => OrderItem(
+      final orderItems = cart.items.map((item) => OrderItem(
         foodItem: item.foodItem,
         quantity: item.quantity,
         note: item.note,

@@ -30,7 +30,7 @@ class CartScreen extends ConsumerWidget {
                 ? _buildEmptyState(context)
                 : _buildCartList(context, ref, cart),
           ),
-          if (cart.isNotEmpty) _buildSummary(context, ref, total),
+          if (cart.items.isNotEmpty) _buildSummary(context, ref, total),
         ],
       ),
       bottomNavigationBar: const CustomBottomNavBar(currentIndex: 2),

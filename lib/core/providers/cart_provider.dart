@@ -1,4 +1,10 @@
+import 'dart:convert';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'seat_selection_provider.dart';
+import 'auth_provider.dart';
+import '../models/food_item.dart';
+import '../models/combo_model.dart';
 import '../models/cart_breakdown.dart';
 import '../services/supabase_service.dart';
 
@@ -198,27 +204,27 @@ class CartNotifier extends StateNotifier<CartState> {
       category: combo.category,
     );
 
-    final existingIndex = state.indexWhere(
+    final existingIndex = state.items.indexWhere(
       (element) => element.isCombo && element.comboId == combo.id,
     );
 
     if (existingIndex != -1) {
-      state = [
-        for (int i = 0; i < state.length; i++)
+      state = state.copyWith(items: [
+        for (int i = 0; i < state.items.length; i++)
           if (i == existingIndex)
             CartItem(
               foodItem: comboAsFood,
-              quantity: state[i].quantity + 1,
+              quantity: state.items[i].quantity + 1,
               isCombo: true,
               comboId: combo.id,
               comboName: combo.name,
             )
           else
-            state[i]
-      ];
+            state.items[i]
+      ]);
     } else {
-      state = [
-        ...state,
+      state = state.copyWith(items: [
+        ...state.items,
         CartItem(
           foodItem: comboAsFood,
           quantity: 1,
@@ -226,9 +232,10 @@ class CartNotifier extends StateNotifier<CartState> {
           comboId: combo.id,
           comboName: combo.name,
         ),
-      ];
+      ]);
     }
     _saveCart();
+    _fetchBreakdown();
   }
 
   void validateAndAddItem(FoodItem item, String? currentHallId) {
@@ -273,15 +280,13 @@ class CartNotifier extends StateNotifier<CartState> {
   double get totalAmount => state.breakdown.total;
 
   void validateAvailability(List<FoodItem> freshMenu) {
-    if (state.isEmpty) return;
+    if (state.items.isEmpty) return;
     
     final List<CartItem> availableItems = [];
     bool changed = false;
 
-    for (final item in state) {
+    for (final item in state.items) {
       if (item.isCombo) {
-         // Combos might need separate validation if we have a combos list
-         // For now keep them, or we could fetch availability via RPC
          availableItems.add(item);
          continue;
       }
@@ -291,23 +296,24 @@ class CartNotifier extends StateNotifier<CartState> {
         availableItems.add(item);
       } else {
         changed = true;
-        print('🚫 Item ${item.foodItem.name} became unavailable. Removing from cart.');
       }
     }
 
     if (changed) {
-      state = availableItems;
+      state = state.copyWith(items: availableItems);
       _saveCart();
+      _fetchBreakdown();
     }
   }
 
   void clearCart() {
-    state = [];
+    state = state.copyWith(items: []);
     _saveCart();
+    _fetchBreakdown();
   }
 }
 
-final cartProvider = StateNotifierProvider<CartNotifier, List<CartItem>>((ref) {
+final cartProvider = StateNotifierProvider<CartNotifier, CartState>((ref) {
   final auth = ref.watch(authProvider);
   return CartNotifier(ref, auth.userId);
 });

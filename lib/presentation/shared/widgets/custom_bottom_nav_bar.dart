@@ -37,7 +37,7 @@ class CustomBottomNavBar extends ConsumerWidget {
     final isDark = theme.brightness == Brightness.dark;
     
     final cartItems = ref.watch(cartProvider);
-    final cartCount = cartItems.fold<int>(0, (sum, item) => sum + item.quantity);
+    final cartCount = cartItems.items.fold<int>(0, (sum, item) => sum + item.quantity);
 
     return Container(
       padding: EdgeInsets.only(
