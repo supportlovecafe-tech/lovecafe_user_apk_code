@@ -90,7 +90,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             _buildSectionTitle('Order Summary'),
             _buildOrderItems(cartItems),
             if (cartState.isValidating)
-               const Padding(
+               Padding(
                  padding: EdgeInsets.symmetric(vertical: 8),
                  child: Row(children: [SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2)), SizedBox(width: 8), Text('Validating prices...', style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.6)))]),
                ),

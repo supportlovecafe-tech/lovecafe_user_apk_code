@@ -17,7 +17,7 @@ class CartScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final cart = ref.watch(cartProvider);
-    final total = cart.fold<double>(
+    final total = cart.items.fold<double>(
         0, (sum, item) => sum + (item.foodItem.price * item.quantity));
 
     return Scaffold(
@@ -26,9 +26,9 @@ class CartScreen extends ConsumerWidget {
         children: [
           _buildAppBar(context),
           Expanded(
-            child: cart.isEmpty
+            child: cart.items.isEmpty
                 ? _buildEmptyState(context)
-                : _buildCartList(context, ref, cart),
+                : _buildCartList(context, ref, cart.items),
           ),
           if (cart.items.isNotEmpty) _buildSummary(context, ref, total),
         ],
