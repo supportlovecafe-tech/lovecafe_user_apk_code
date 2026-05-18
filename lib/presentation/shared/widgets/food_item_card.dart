@@ -12,6 +12,7 @@ class FoodItemCard extends StatefulWidget {
   final double price;
   final double? originalPrice;
   final String? savingsLabel;
+  final bool isVeg;
   final VoidCallback onAdd;
   final VoidCallback? onTap;
 
@@ -23,6 +24,7 @@ class FoodItemCard extends StatefulWidget {
     required this.price,
     this.originalPrice,
     this.savingsLabel,
+    this.isVeg = true,
     required this.onAdd,
     this.onTap,
   });
@@ -115,12 +117,12 @@ class _FoodItemCardState extends State<FoodItemCard> {
                               color: AppColors.bgDarkStart.withOpacity(0.8),
                               shape: BoxShape.circle,
                               boxShadow: [
-                                BoxShadow(color: AppColors.success.withOpacity(0.5), blurRadius: 10)
+                                BoxShadow(color: (widget.isVeg ? Colors.green : Colors.red).withOpacity(0.5), blurRadius: 10)
                               ],
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.circle,
-                              color: AppColors.success,
+                              color: widget.isVeg ? Colors.green : Colors.red,
                               size: 10,
                             ),
                           ),
@@ -136,15 +138,31 @@ class _FoodItemCardState extends State<FoodItemCard> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            widget.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTextStyles.headingMedium.copyWith(
-                              fontSize: 14,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                            ),
+                          Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: widget.isVeg ? Colors.green : Colors.red,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white.withOpacity(0.5), width: 1),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(
+                                  widget.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTextStyles.headingMedium.copyWith(
+                                    fontSize: 14,
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 2),
                           Text(

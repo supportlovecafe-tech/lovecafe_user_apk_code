@@ -8,6 +8,9 @@ class FoodItem {
   final String category;
   final List<String> hallIds;
   final bool isAvailable;
+  final bool applyGst;
+  final bool isVeg;
+  final String? foodType; // 'READY_FOOD' | 'KITCHEN_FOOD'
 
   FoodItem({
     required this.id,
@@ -19,6 +22,9 @@ class FoodItem {
     required this.category,
     this.hallIds = const [],
     this.isAvailable = true,
+    this.applyGst = true,
+    this.isVeg = true,
+    this.foodType = 'KITCHEN_FOOD',
   });
 
   FoodItem copyWith({
@@ -30,6 +36,9 @@ class FoodItem {
     String? category,
     List<String>? hallIds,
     bool? isAvailable,
+    bool? applyGst,
+    bool? isVeg,
+    String? foodType,
   }) {
     return FoodItem(
       id: id ?? this.id,
@@ -40,6 +49,9 @@ class FoodItem {
       category: category ?? this.category,
       hallIds: hallIds ?? this.hallIds,
       isAvailable: isAvailable ?? this.isAvailable,
+      applyGst: applyGst ?? this.applyGst,
+      isVeg: isVeg ?? this.isVeg,
+      foodType: foodType ?? this.foodType,
     );
   }
 
@@ -53,6 +65,9 @@ class FoodItem {
       'category': category,
       'hallIds': hallIds,
       'isAvailable': isAvailable,
+      'applyGst': applyGst,
+      'isVeg': isVeg,
+      'foodType': foodType,
     };
   }
 
@@ -69,6 +84,9 @@ class FoodItem {
           .map((entry) => entry.toString())
           .toList(),
       isAvailable: map['is_available'] as bool? ?? map['isAvailable'] as bool? ?? true,
+      applyGst: map['apply_gst'] as bool? ?? map['applyGst'] as bool? ?? true,
+      isVeg: map['is_veg'] as bool? ?? map['isVeg'] as bool? ?? true,
+      foodType: map['food_type']?.toString() ?? map['foodType']?.toString() ?? 'KITCHEN_FOOD',
     );
   }
 
@@ -81,6 +99,9 @@ class FoodItem {
       'image_url': imageUrl,
       'category': category,
       'is_available': isAvailable,
+      'apply_gst': applyGst,
+      'is_veg': isVeg,
+      'food_type': foodType,
     };
   }
 }

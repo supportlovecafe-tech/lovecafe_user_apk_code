@@ -55,7 +55,10 @@ final appRouter = GoRouter(
     ),
     GoRoute(
       path: '/menu',
-      builder: (context, state) => const MenuScreen(),
+      builder: (context, state) {
+        final offer = state.extra as Map<String, dynamic>?;
+        return MenuScreen(initialOffer: offer);
+      },
     ),
     GoRoute(
       path: '/cart',

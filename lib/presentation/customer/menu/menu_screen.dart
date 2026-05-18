@@ -12,6 +12,7 @@ import '../../../core/providers/menu_provider.dart';
 import '../../../core/providers/combo_provider.dart';
 import '../../../core/providers/seat_selection_provider.dart';
 import '../../../core/providers/category_provider.dart';
+import '../../../core/providers/offers_provider.dart';
 import '../../shared/widgets/custom_bottom_nav_bar.dart';
 import '../../shared/widgets/food_item_card.dart';
 import '../../shared/widgets/safe_network_image.dart';
@@ -22,41 +23,32 @@ import 'widgets/combo_detail_popup.dart';
 import 'widgets/reorder_section.dart';
 
 class MenuScreen extends ConsumerStatefulWidget {
-  const MenuScreen({super.key});
+  const MenuScreen({super.key, this.initialOffer});
+
+  final Map<String, dynamic>? initialOffer;
 
   @override
   ConsumerState<MenuScreen> createState() => _MenuScreenState();
 }
 
 class _MenuScreenState extends ConsumerState<MenuScreen> {
-  final List<String> categories = const [
-    'All',
-    'Combos',
-    'Popcorn',
-    'Snacks',
-    'Beverages',
-    'Meals',
-  ];
-  
-  final Map<String, List<String>> categoryMatches = {
-    'Popcorn': ['POPCORN', 'CORN'],
-    'Snacks': ['SNACKS', 'TACOS', 'SIDES', 'STARTERS'],
-    'Beverages': ['BEVERAGES', 'DRINKS', 'SODA', 'COFFEE', 'TEA'],
-    'Meals': ['MEALS', 'BURGERS', 'PIZZA', 'PLATTERS'],
-  };
-
+  bool _showVegOnly = false;
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final selection = ref.read(seatSelectionProvider);
       if (!selection.isComplete) {
         _showLocationSelection();
       } else {
-        ref.read(menuProvider.notifier).refreshMenu(selection.hallId!);
+        await ref.read(menuProvider.notifier).refreshMenu(selection.hallId!);
         ref.read(comboProvider.notifier).loadCombos(selection.hallId!);
+        
+        if (widget.initialOffer != null && mounted) {
+          _showOfferItemsShelf(context, ref, widget.initialOffer!, selection);
+        }
       }
     });
   }
@@ -93,26 +85,30 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
             food.description.toLowerCase().contains(query);
       }).toList();
     }
+
+    if (_showVegOnly) {
+      result = result.where((food) => food.isVeg).toList();
+    }
     
-    if (selectedCategory != null && selectedCategory != 'All' && selectedCategory != 'Combos') {
-      final matches = categoryMatches[selectedCategory] ?? [];
-      result = result.where((food) {
-        final cat = (food.category ?? '').toUpperCase();
-        return matches.contains(cat) || cat == selectedCategory.toUpperCase();
-      }).toList();
+    if (selectedCategory != null && selectedCategory != 'ALL' && selectedCategory != 'Combos') {
+      result = result.where((food) => food.category.toUpperCase() == selectedCategory.toUpperCase()).toList();
     }
     
     return result;
   }
 
   List<ComboMeal> getFilteredCombos(List<ComboMeal> allCombos, String? selectedCategory) {
-    if (selectedCategory == 'All' && _searchQuery.isNotEmpty) {
+    var result = allCombos;
+    if (selectedCategory == null && _searchQuery.isNotEmpty) {
       final query = _searchQuery.toLowerCase();
-      return allCombos.where((c) =>
+      result = result.where((c) =>
           c.name.toLowerCase().contains(query) ||
           c.description.toLowerCase().contains(query)).toList();
     }
-    return allCombos;
+    if (_showVegOnly) {
+      result = result.where((c) => c.isVeg).toList();
+    }
+    return result;
   }
 
   bool get _isComboTab => ref.watch(categoryProvider) == 'Combos';
@@ -126,9 +122,32 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     final comboState = ref.watch(comboProvider);
     final selection = ref.watch(seatSelectionProvider);
     
+    final flatCategories = [
+      'ALL',
+      'COMBOS',
+      'POPCORN',
+      'LASSI',
+      'MILKSHAKE',
+      'ICE_CREAM',
+      'BEVERAGES',
+      'LOVE_SPECIAL',
+      'SNACKS',
+      'SANDWICH',
+      'BURGER',
+      'TIKKA',
+      'WRAPS',
+      'TACO',
+      'MOMO',
+      'CHINESE_RICE_COMBO',
+      'CHINESE_NOODLES_COMBO',
+      'CHINESE_PASTA',
+      'PIZZA',
+      'FUSION_FOODS',
+    ];
+    
     final showingCombos = selectedCategory == 'Combos';
     final foods = showingCombos ? <FoodItem>[] : getFilteredFoods(menuState.items, selectedCategory);
-    final combos = showingCombos || selectedCategory == 'All'
+    final combos = showingCombos || selectedCategory == null
         ? getFilteredCombos(comboState.items, selectedCategory)
         : <ComboMeal>[];
 
@@ -140,19 +159,17 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
           _buildAppBar(context, selection),
           _buildHeader(context, selection),
           _buildSearchBar(context),
-          // Feature 3: Order Again section
+          _buildOffersCarousel(context, ref),
           const ReorderSection(),
-          _buildStickyTabs(context, selectedCategory),
-          // Feature 2: Show combos grid when Combos tab or search in All
+          _buildStickyTabs(context, selectedCategory, flatCategories),
           if (showingCombos)
             comboState.isLoading
                 ? _buildShimmerGrid(context)
                 : _buildCombosGrid(context, combos, selection)
           else ...[
-            // Show combos at top when in "All" category
-            if (selectedCategory == 'All' && combos.isNotEmpty)
+            if (selectedCategory == null && combos.isNotEmpty)
               _buildCombosHeader(context),
-            if (selectedCategory == 'All' && combos.isNotEmpty)
+            if (selectedCategory == null && combos.isNotEmpty)
               _buildCombosHorizontalRow(context, combos, selection),
             menuState.isLoading
                 ? _buildShimmerGrid(context)
@@ -244,42 +261,366 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-        child: Container(
-          decoration: BoxDecoration(
-            color: AppColors.surfaceDark.withOpacity(0.6),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.borderDark.withOpacity(0.5)),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.accent.withOpacity(0.05),
-                blurRadius: 15,
-                spreadRadius: 2,
-              ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(20),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: TextField(
-                onChanged: (v) => setState(() => _searchQuery = v),
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'Search deliciousness...',
-                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
-                  prefixIcon: const Icon(Icons.search, color: AppColors.accent),
-                  border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 15),
+        child: Row(
+          children: [
+            Expanded(
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceDark.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.borderDark.withOpacity(0.5)),
+                ),
+                child: TextField(
+                  onChanged: (v) => setState(() => _searchQuery = v),
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Search deliciousness...',
+                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 14),
+                    prefixIcon: const Icon(Icons.search, color: AppColors.accent, size: 20),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
                 ),
               ),
             ),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: () => setState(() => _showVegOnly = !_showVegOnly),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                decoration: BoxDecoration(
+                  color: _showVegOnly ? Colors.green.withOpacity(0.2) : AppColors.surfaceDark.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(
+                    color: _showVegOnly ? Colors.green : AppColors.borderDark.withOpacity(0.5),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _showVegOnly ? Icons.eco_rounded : Icons.eco_outlined,
+                      size: 16,
+                      color: _showVegOnly ? Colors.green : Colors.white.withOpacity(0.4),
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'VEG',
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        color: _showVegOnly ? Colors.green : Colors.white.withOpacity(0.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.2, end: 0),
+    );
+  }
+
+  Widget _buildOffersCarousel(BuildContext context, WidgetRef ref) {
+    final offersState = ref.watch(offersProvider);
+    final selection = ref.watch(seatSelectionProvider);
+
+    return offersState.when(
+      data: (offers) {
+        if (offers.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+
+        return SliverToBoxAdapter(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [Colors.pink, Colors.purple]),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.stars_rounded, color: Colors.white, size: 14),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Special Offers & Promos',
+                      style: AppTextStyles.headingMedium.copyWith(fontSize: 16, fontWeight: FontWeight.w900),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(
+                height: 120,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: offers.length,
+                  itemBuilder: (context, index) {
+                    final offer = offers[index];
+                    return GestureDetector(
+                      onTap: () => _showOfferItemsShelf(context, ref, offer, selection),
+                      child: Container(
+                        width: 280,
+                        margin: const EdgeInsets.only(right: 14, bottom: 8, top: 4),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [AppColors.primary.withOpacity(0.2), AppColors.secondary.withOpacity(0.1)],
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                          boxShadow: [
+                            BoxShadow(color: AppColors.primary.withOpacity(0.05), blurRadius: 8)
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.accent.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(6),
+                                      border: Border.all(color: AppColors.accent.withOpacity(0.5)),
+                                    ),
+                                    child: Text(
+                                      (offer['category'] as String).replaceAll('_', ' '),
+                                      style: const TextStyle(
+                                        color: AppColors.accent,
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    offer['title'] as String,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    offer['description'] as String? ?? 'Special promo deal.',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 10),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios_rounded, color: AppColors.primaryLight, size: 16),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
-        ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.2, end: 0),
+        );
+      },
+      loading: () => const SliverToBoxAdapter(child: SizedBox.shrink()),
+      error: (_, __) => const SliverToBoxAdapter(child: SizedBox.shrink()),
+    );
+  }
+
+  void _showOfferItemsShelf(BuildContext context, WidgetRef ref, Map<String, dynamic> offer, SeatSelectionState selection) {
+    final menuItems = ref.read(menuProvider).items;
+    final mappedItemIds = List<String>.from(
+      offer['offer_items']?.map((oi) => oi['food_item_id'] as String) ?? []
+    );
+    final targetItems = menuItems.where((item) => mappedItemIds.contains(item.id)).toList();
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.pink.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.pink.withOpacity(0.4)),
+                  ),
+                  child: Text(
+                    (offer['category'] as String).replaceAll('_', ' '),
+                    style: const TextStyle(color: Colors.pinkAccent, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              offer['title'] as String,
+              style: AppTextStyles.headingHero.copyWith(fontSize: 24, fontWeight: FontWeight.w900),
+            ),
+            if (offer['description'] != null && (offer['description'] as String).isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                offer['description'] as String,
+                style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12, height: 1.4),
+              ),
+            ],
+            const SizedBox(height: 24),
+            Text(
+              'PROMOTIONAL PRODUCTS',
+              style: TextStyle(
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                color: Colors.white.withOpacity(0.4),
+                letterSpacing: 1.5,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (targetItems.isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24),
+                child: Text(
+                  'No items currently mapped to this promotion.',
+                  style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 12, fontStyle: FontStyle.italic),
+                  textAlign: TextAlign.center,
+                ),
+              )
+            else
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.4,
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: targetItems.length,
+                  itemBuilder: (context, index) {
+                    final item = targetItems[index];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.02),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: Colors.white.withOpacity(0.05)),
+                      ),
+                      child: Row(
+                        children: [
+                          SafeNetworkImage(
+                            imageUrl: item.imageUrl,
+                            width: 60,
+                            height: 60,
+                            fit: BoxFit.cover,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.name,
+                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  '₹${item.price.toInt()}',
+                                  style: const TextStyle(
+                                    color: AppColors.primaryLight,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              ref.read(cartProvider.notifier).validateAndAddItem(item, selection.hallId);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('${item.name} added to cart!'),
+                                  behavior: SnackBarBehavior.floating,
+                                  duration: const Duration(seconds: 1),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              minimumSize: Size.zero,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text('ADD', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildStickyTabs(BuildContext context, String? selectedCategory) {
+  Widget _buildStickyTabs(BuildContext context, String? selectedCategory, List<String> categories) {
+    const Map<String, String> categoryLabels = {
+      'ALL': '🍛 All',
+      'COMBOS': '🔥 Combos',
+      'POPCORN': '🍿 Popcorn',
+      'LASSI': '🥛 Lassi',
+      'MILKSHAKE': '🥤 Milkshake',
+      'ICE_CREAM': '🍦 Ice Cream',
+      'BEVERAGES': '🧃 Beverages',
+      'LOVE_SPECIAL': '❤️ Love Special',
+      'SNACKS': '🍟 Snacks',
+      'SANDWICH': '🥪 Sandwich',
+      'BURGER': '🍔 Burger',
+      'TIKKA': '🍗 Tikka',
+      'WRAPS': '🌯 Wraps',
+      'TACO': '🌮 Taco',
+      'MOMO': '🥟 Momo',
+      'CHINESE_RICE_COMBO': '🍚 Chinese Combo',
+      'CHINESE_NOODLES_COMBO': '🍜 Noodles Combo',
+      'CHINESE_PASTA': '🍝 Pasta',
+      'PIZZA': '🍕 Pizza',
+      'FUSION_FOODS': '🌟 Fusion Foods',
+    };
+
     return SliverPersistentHeader(
       pinned: true,
       delegate: _StickyTabBarDelegate(
@@ -293,16 +634,20 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
             itemCount: categories.length,
             itemBuilder: (context, index) {
               final cat = categories[index];
-              final isSelected = (selectedCategory == null && cat == 'All') || (selectedCategory == cat);
-              final isComboTab = cat == 'Combos';
+              final isSelected = (selectedCategory == null && cat == 'ALL') || 
+                  (selectedCategory == 'Combos' && cat == 'COMBOS') || 
+                  (selectedCategory == cat);
+              final isComboTab = cat == 'COMBOS';
               
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
                 child: ChoiceChip(
-                  label: Text(isComboTab ? '🔥 $cat' : cat),
+                  label: Text(categoryLabels[cat] ?? cat),
                   selected: isSelected,
                   onSelected: (val) {
-                    ref.read(categoryProvider.notifier).setCategory(cat == 'All' ? null : cat);
+                    ref.read(categoryProvider.notifier).setCategory(
+                      cat == 'ALL' ? null : (cat == 'COMBOS' ? 'Combos' : cat)
+                    );
                   },
                   backgroundColor: isComboTab
                       ? const Color(0xFFFF6B35).withOpacity(0.08)
@@ -332,7 +677,6 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     );
   }
 
-  /// Feature 2: "Combo Deals" header shown when All tab has combos
   Widget _buildCombosHeader(BuildContext context) {
     return SliverToBoxAdapter(
       child: Padding(
@@ -358,7 +702,6 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     );
   }
 
-  /// Feature 2: Horizontal combo scroll in "All" tab
   Widget _buildCombosHorizontalRow(BuildContext context, List<ComboMeal> combos, SeatSelectionState selection) {
     return SliverToBoxAdapter(
       child: SizedBox(
@@ -387,7 +730,6 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     );
   }
 
-  /// Feature 2: Full grid view for "Combos" tab
   Widget _buildCombosGrid(BuildContext context, List<ComboMeal> combos, SeatSelectionState selection) {
     if (combos.isEmpty) {
       return SliverToBoxAdapter(
@@ -497,6 +839,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
               name: item.name,
               imageUrl: item.imageUrl,
               price: item.price,
+              isVeg: item.isVeg,
               onTap: () => context.push('/food-detail', extra: item),
               onAdd: () {
                 ref.read(cartProvider.notifier).validateAndAddItem(item, selection.hallId);

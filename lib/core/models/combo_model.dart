@@ -9,9 +9,11 @@ class ComboMeal {
   final String imageUrl;
   final double price;           // Combo selling price
   final double? originalPrice;  // Sum of individual item prices (for savings display)
-  final String category;        // Snacks Combo | Family Combo | Beverage Combo | Premium Combo
+  final String category;
   final bool isAvailable;
-  final List<ComboItem> items;  // Constituent items
+  final bool applyGst;
+  final bool isVeg;
+  final List<ComboItem> items;
 
   ComboMeal({
     required this.id,
@@ -23,6 +25,8 @@ class ComboMeal {
     this.originalPrice,
     this.category = 'Snacks Combo',
     this.isAvailable = true,
+    this.applyGst = true,
+    this.isVeg = true,
     this.items = const [],
   });
 
@@ -45,6 +49,8 @@ class ComboMeal {
       originalPrice: (map['original_price'] as num?)?.toDouble(),
       category: map['category']?.toString() ?? 'Snacks Combo',
       isAvailable: map['is_available'] as bool? ?? true,
+      applyGst: map['apply_gst'] as bool? ?? map['applyGst'] as bool? ?? true,
+      isVeg: map['is_veg'] as bool? ?? map['isVeg'] as bool? ?? true,
       items: rawItems.map((i) => ComboItem.fromMap(i as Map<String, dynamic>)).toList(),
     );
   }
@@ -60,6 +66,8 @@ class ComboMeal {
       'original_price': originalPrice,
       'category': category,
       'is_available': isAvailable,
+      'apply_gst': applyGst,
+      'is_veg': isVeg,
     };
   }
 }

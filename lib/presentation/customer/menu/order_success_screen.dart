@@ -97,7 +97,6 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
   Widget _buildOrderSummaryCard(
       BuildContext context, String orderId, String location, dynamic total) {
     return Container(
-      padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: AppColors.surfaceDark.withOpacity(0.4),
         borderRadius: BorderRadius.circular(32),
@@ -114,16 +113,19 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
         borderRadius: BorderRadius.circular(32),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Column(
-            children: [
-              _infoRow(context, 'Order ID', orderId),
-              const SizedBox(height: 24),
-              _infoRow(context, 'Location', location),
-              const SizedBox(height: 24),
-              Divider(color: AppColors.borderDark.withOpacity(0.5)),
-              const SizedBox(height: 24),
-              _infoRow(context, 'Total Paid', '₹$total', isBold: true),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              children: [
+                _infoRow(context, 'Order ID', orderId),
+                const SizedBox(height: 24),
+                _infoRow(context, 'Location', location),
+                const SizedBox(height: 24),
+                Divider(color: AppColors.borderDark.withOpacity(0.5)),
+                const SizedBox(height: 24),
+                _infoRow(context, 'Total Paid', '₹$total', isBold: true),
+              ],
+            ),
           ),
         ),
       ),
@@ -136,6 +138,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
 
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
@@ -144,17 +147,21 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        Text(
-          value,
-          style: isBold
-              ? theme.textTheme.titleLarge?.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w900,
-                )
-              : theme.textTheme.bodyLarge?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.end,
+            style: isBold
+                ? theme.textTheme.titleLarge?.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w900,
+                  )
+                : theme.textTheme.bodyLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+          ),
         ),
       ],
     );

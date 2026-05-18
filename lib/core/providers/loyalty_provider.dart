@@ -76,21 +76,18 @@ class LoyaltyNotifier extends StateNotifier<LoyaltyState> {
     try {
       final client = Supabase.instance.client;
       final response = await client
-          .from('loyalty_wallets')
-          .select('*')
-          .eq('user_id', userId)
+          .from('customer_profiles')
+          .select('loyalty_points')
+          .eq('id', userId)
           .maybeSingle();
 
       if (response != null) {
         state = state.copyWith(
-          availablePoints: response['total_points'] as int? ?? 0,
-          rupeeValue: (response['total_points'] as int? ?? 0) * pointValue,
-          totalEarned: response['total_earned'] as int? ?? 0,
-          totalRedeemed: response['total_redeemed'] as int? ?? 0,
+          availablePoints: response['loyalty_points'] as int? ?? 0,
+          rupeeValue: (response['loyalty_points'] as int? ?? 0) * pointValue,
           isLoading: false,
         );
       } else {
-        // Wallet might not exist yet
         state = state.copyWith(isLoading: false);
       }
     } catch (e) {

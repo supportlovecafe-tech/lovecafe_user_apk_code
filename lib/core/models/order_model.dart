@@ -2,7 +2,7 @@ import '../../../core/models/food_item.dart';
 
 enum OrderStatus { PENDING, PREPARING, READY, DELIVERED, CANCELLED }
 enum PaymentStatus { PENDING, SUCCESS, FAILED }
-enum PaymentMethod { DEMO_UPI, DEMO_CARD, DEMO_WALLET }
+enum PaymentMethod { DEMO_UPI, DEMO_CARD, DEMO_WALLET, PAY_ON_DELIVERY }
 
 class OrderModel {
   final String id;
@@ -98,9 +98,11 @@ class OrderModel {
       displayId: dbDisplayId ?? dbId.substring(0, dbId.length > 8 ? 8 : dbId.length),
       items: rawItems.map((item) {
         final row = item as Map<String, dynamic>;
+        final foodId = row['food_id']?.toString() ?? '';
         return OrderItem(
+          itemId: row['item_id']?.toString() ?? '${foodId}_${DateTime.now().millisecondsSinceEpoch}',
           foodItem: FoodItem(
-            id: row['food_id']?.toString() ?? '',
+            id: foodId,
             name: row['food_name']?.toString() ?? '',
             description: row['food_description']?.toString() ?? '',
             imageUrl: row['food_image']?.toString() ?? '',
@@ -113,6 +115,7 @@ class OrderModel {
           isCombo: row['is_combo'] == true,             // Feature 2: combo flag
           comboId: row['combo_id']?.toString(),         // Feature 2: combo id
           comboName: row['combo_name']?.toString(),     // Feature 2: combo name
+          kdsStatus: row['kds_status']?.toString() ?? 'PENDING',
         );
       }).toList(),
       totalAmount: (map['total_amount'] as num?)?.toDouble() ?? 0,
@@ -140,6 +143,7 @@ class OrderModel {
 }
 
 class OrderItem {
+  final String itemId;
   final FoodItem foodItem;
   final int quantity;
   final bool isDelivered;
@@ -147,8 +151,10 @@ class OrderItem {
   final bool isCombo;       // Feature 2: true if this item is part of a combo
   final String? comboId;    // Feature 2: combo UUID
   final String? comboName;  // Feature 2: combo display name
+  final String kdsStatus;   // PENDING, PREPARING, READY, DELIVERED
 
   OrderItem({
+    required this.itemId,
     required this.foodItem,
     required this.quantity,
     this.isDelivered = false,
@@ -156,10 +162,12 @@ class OrderItem {
     this.isCombo = false,
     this.comboId,
     this.comboName,
+    this.kdsStatus = 'PENDING',
   });
 
   Map<String, dynamic> toMap() {
     return {
+      'item_id': itemId,
       'food_id': foodItem.id,
       'food_name': foodItem.name,
       'food_price': foodItem.price,
@@ -168,6 +176,7 @@ class OrderItem {
       'food_category': foodItem.category,
       'quantity': quantity,
       'is_delivered': isDelivered,
+      'kds_status': kdsStatus,
       if (note != null && note!.isNotEmpty) 'item_note': note,   // Feature 1
       if (isCombo) 'is_combo': true,                             // Feature 2
       if (comboId != null) 'combo_id': comboId,                  // Feature 2

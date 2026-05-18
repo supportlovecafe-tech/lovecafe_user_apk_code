@@ -539,8 +539,8 @@ class _LocationSelectionPopupState
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final rows = List.generate(
-        10, (idx) => String.fromCharCode('A'.codeUnitAt(0) + idx));
-    final seatNumbers = List.generate(12, (idx) => idx + 1);
+        26, (idx) => String.fromCharCode('A'.codeUnitAt(0) + idx));
+    final seatNumbers = List.generate(40, (idx) => idx + 1);
 
     return Container(
       padding: const EdgeInsets.all(20),

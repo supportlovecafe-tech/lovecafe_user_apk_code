@@ -1,5 +1,6 @@
 class CartBreakdown {
   final double subtotal;
+  final double discount;
   final double cgst;
   final double sgst;
   final double platformCharges;
@@ -8,6 +9,7 @@ class CartBreakdown {
 
   CartBreakdown({
     this.subtotal = 0.0,
+    this.discount = 0.0,
     this.cgst = 0.0,
     this.sgst = 0.0,
     this.platformCharges = 0.0,
@@ -17,11 +19,12 @@ class CartBreakdown {
 
   factory CartBreakdown.fromMap(Map<String, dynamic> map) {
     return CartBreakdown(
-      subtotal: (map['subtotal'] as num).toDouble(),
-      cgst: (map['cgst'] as num).toDouble(),
-      sgst: (map['sgst'] as num).toDouble(),
-      platformCharges: (map['platform_charges'] as num).toDouble(),
-      total: (map['total'] as num).toDouble(),
+      subtotal: (map['subtotal'] as num?)?.toDouble() ?? 0.0,
+      discount: (map['discount'] as num?)?.toDouble() ?? 0.0,
+      cgst: (map['cgst'] as num?)?.toDouble() ?? 0.0,
+      sgst: (map['sgst'] as num?)?.toDouble() ?? 0.0,
+      platformCharges: (map['platform_charges'] as num?)?.toDouble() ?? 0.0,
+      total: (map['total'] as num?)?.toDouble() ?? 0.0,
       errors: [],
     );
   }

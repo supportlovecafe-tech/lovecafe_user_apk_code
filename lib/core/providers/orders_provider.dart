@@ -106,7 +106,7 @@ class OrdersNotifier extends StateNotifier<List<OrderModel>> {
     }
   }
 
-  Future<void> placeOrder(
+  Future<OrderModel?> placeOrder(
     List<OrderItem> items,
     double total,
     String location, {
@@ -118,7 +118,7 @@ class OrdersNotifier extends StateNotifier<List<OrderModel>> {
     final selection = _ref.read(seatSelectionProvider);
     final cinemaId = selection.hallId;
     
-    if (cinemaId == null) return;
+    if (cinemaId == null) return null;
     
     final auth = _ref.read(authProvider);
     final userId = auth.userId;
@@ -143,7 +143,7 @@ class OrdersNotifier extends StateNotifier<List<OrderModel>> {
       status: OrderStatus.PENDING,
       timestamp: DateTime.now(),
       location: location,
-      paymentStatus: PaymentStatus.SUCCESS,
+      paymentStatus: paymentMethod == PaymentMethod.PAY_ON_DELIVERY ? PaymentStatus.PENDING : PaymentStatus.SUCCESS,
       paymentMethod: paymentMethod,
       customerPhone: customerPhone,
       pointsEarned: pointsEarned,
@@ -179,6 +179,7 @@ class OrdersNotifier extends StateNotifier<List<OrderModel>> {
         clientUuid: clientUuid,
         pointsRedeemed: pointsRedeemed,
         pointsEarned: pointsEarned,
+        paymentMethod: paymentMethod,
         metadata: metadata,
       );
       
@@ -200,10 +201,13 @@ class OrdersNotifier extends StateNotifier<List<OrderModel>> {
       // CLEAR persistence on success
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('pending_order');
+
+      return newOrder.copyWith(id: realId, isSyncing: false);
     } catch (e) {
       print('Error placing order: $e');
       // On error, remove the optimistic order
       state = state.where((o) => o.id != newOrder.id).toList();
+      rethrow; // Rethrow so the UI knows it failed
     }
   }
 

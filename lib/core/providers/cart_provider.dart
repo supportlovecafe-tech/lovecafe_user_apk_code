@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'seat_selection_provider.dart';
 import 'auth_provider.dart';
 import '../models/food_item.dart';
@@ -130,7 +131,8 @@ class CartNotifier extends StateNotifier<CartState> {
 
     state = state.copyWith(isValidating: true);
     try {
-        final cinemaId = _ref.read(seatSelectionProvider).hallId;
+        final cinemaId = _ref.read(seatSelectionProvider).hallId ?? 
+                         (state.items.isNotEmpty ? state.items.first.foodItem.cinemaId : null);
         
         // Prepare items for API
         final apiItems = state.items.map((i) => {
@@ -149,19 +151,149 @@ class CartNotifier extends StateNotifier<CartState> {
             );
         }
     } catch (e) {
-        print('Error fetching breakdown: $e');
-        // Local fallback if API fails
-        final st = state.items.fold(0.0, (sum, item) => sum + (item.foodItem.price * item.quantity));
-        state = state.copyWith(
+        print('Error fetching breakdown from API, using Supabase local fallback: $e');
+        // ──────────────────────────────────────────────────────────────────
+        // LOCAL OFFER-AWARE FALLBACK: mirrors the backend validate/route.ts
+        // Fetches active offers from Supabase directly and applies correct
+        // discount logic for BOGO, B2G1, UNLIMITED, FLAT, percentage deals.
+        // ──────────────────────────────────────────────────────────────────
+        try {
+          final cinemaId = _ref.read(seatSelectionProvider).hallId ??
+                           (state.items.isNotEmpty ? state.items.first.foodItem.cinemaId : null);
+
+          // Fetch active offers with their mapped items
+          List<Map<String, dynamic>> activeOffers = [];
+          if (cinemaId != null) {
+            final offersResp = await Supabase.instance.client
+                .from('offers')
+                .select('*, offer_items(food_item_id)')
+                .eq('cinema_id', cinemaId)
+                .eq('is_active', true);
+            activeOffers = List<Map<String, dynamic>>.from(offersResp);
+          }
+
+          // Build a set of item IDs for each offer
+          final offerItemSets = <String, Set<String>>{};
+          for (final offer in activeOffers) {
+            final offerItemsList = offer['offer_items'] as List? ?? [];
+            offerItemSets[offer['id'] as String] = offerItemsList
+                .map((oi) => oi['food_item_id'].toString())
+                .toSet();
+          }
+
+          double grossSubtotal = 0;
+          double totalDiscount = 0;
+          double netTaxableSubtotal = 0;
+          double netSubtotal = 0;
+
+          for (final cartItem in state.items) {
+            final price = cartItem.foodItem.price;
+            final quantity = cartItem.quantity;
+            final itemGross = price * quantity;
+            grossSubtotal += itemGross;
+
+            final itemId = cartItem.isCombo
+                ? (cartItem.comboId ?? '')
+                : cartItem.foodItem.id;
+
+            // Find best applicable offer
+            double bestDiscount = 0;
+            for (final offer in activeOffers) {
+              final mappedIds = offerItemSets[offer['id'] as String] ?? {};
+              if (!mappedIds.contains(itemId)) continue;
+
+              final category = offer['category'] as String? ?? '';
+              double currentDiscount = 0;
+
+              switch (category) {
+                case 'BUY_1_GET_1':
+                  // Every 2 items → 1 free (pay for 1, get 1 free)
+                  final freeCount = (quantity ~/ 2) * 1;
+                  currentDiscount = freeCount * price;
+                  break;
+                case 'BUY_1_GET_2':
+                  // Every 3 items → 2 free
+                  final freeCount = (quantity ~/ 3) * 2;
+                  currentDiscount = freeCount * price;
+                  break;
+                case 'BUY_2_GET_1':
+                  // Every 3 items → 1 free
+                  final freeCount = (quantity ~/ 3) * 1;
+                  currentDiscount = freeCount * price;
+                  break;
+                case 'UNLIMITED':
+                  final promoPrice = (offer['promo_price'] as num?)?.toDouble();
+                  if (promoPrice != null && price > promoPrice) {
+                    currentDiscount = (price - promoPrice) * quantity;
+                  }
+                  break;
+                case 'FLAT_DISCOUNT':
+                  final flatAmt = (offer['flat_discount_amount'] as num?)?.toDouble() ?? 0;
+                  currentDiscount = flatAmt.clamp(0, itemGross);
+                  break;
+                case 'OFFER_OF_THE_DAY':
+                case 'OFFER_OF_THE_WEEK':
+                case 'OFFER_OF_THE_FESTIVAL':
+                case 'OFFER_OF_THE_FILM':
+                  final pct = (offer['discount_percentage'] as num?)?.toDouble() ?? 0;
+                  final promoP = (offer['promo_price'] as num?)?.toDouble();
+                  final flatA = (offer['flat_discount_amount'] as num?)?.toDouble() ?? 0;
+                  if (pct > 0) {
+                    currentDiscount = itemGross * (pct / 100);
+                  } else if (promoP != null && price > promoP) {
+                    currentDiscount = (price - promoP) * quantity;
+                  } else if (flatA > 0) {
+                    currentDiscount = flatA.clamp(0, itemGross);
+                  }
+                  break;
+              }
+
+              if (currentDiscount > bestDiscount) {
+                bestDiscount = currentDiscount;
+              }
+            }
+
+            totalDiscount += bestDiscount;
+            final itemNet = itemGross - bestDiscount;
+            netSubtotal += itemNet;
+            if (cartItem.foodItem.applyGst) {
+              netTaxableSubtotal += itemNet;
+            }
+          }
+
+          final cgst = netTaxableSubtotal * 0.025;
+          final sgst = netTaxableSubtotal * 0.025;
+          final platformCharges = netSubtotal * 0.01;
+          state = state.copyWith(
             breakdown: CartBreakdown(
-                subtotal: st,
-                cgst: st * 0.025,
-                sgst: st * 0.025,
-                platformCharges: st * 0.01,
-                total: st * 1.06,
+              subtotal: grossSubtotal,
+              discount: totalDiscount,
+              cgst: cgst,
+              sgst: sgst,
+              platformCharges: platformCharges,
+              total: netSubtotal + cgst + sgst + platformCharges,
             ),
             isValidating: false,
-        );
+          );
+        } catch (fallbackErr) {
+          // Last-resort: plain arithmetic, no discounts
+          print('Offer-aware fallback also failed: $fallbackErr — using plain subtotal');
+          final st = state.items.fold(0.0, (sum, item) => sum + (item.foodItem.price * item.quantity));
+          final taxableSt = state.items.where((item) => item.foodItem.applyGst).fold(0.0, (sum, item) => sum + (item.foodItem.price * item.quantity));
+          final cgst = taxableSt * 0.025;
+          final sgst = taxableSt * 0.025;
+          final platformCharges = st * 0.01;
+          state = state.copyWith(
+            breakdown: CartBreakdown(
+              subtotal: st,
+              cgst: cgst,
+              sgst: sgst,
+              platformCharges: platformCharges,
+              total: st + cgst + sgst + platformCharges,
+            ),
+            isValidating: false,
+          );
+        }
     }
   }
 
@@ -202,6 +334,7 @@ class CartNotifier extends StateNotifier<CartState> {
       price: combo.price,
       imageUrl: combo.imageUrl,
       category: combo.category,
+      applyGst: combo.applyGst,
     );
 
     final existingIndex = state.items.indexWhere(
@@ -274,6 +407,7 @@ class CartNotifier extends StateNotifier<CartState> {
   }
 
   double get subtotal => state.breakdown.subtotal;
+  double get discount => state.breakdown.discount;
   double get cgst => state.breakdown.cgst;
   double get sgst => state.breakdown.sgst;
   double get platformCharges => state.breakdown.platformCharges;

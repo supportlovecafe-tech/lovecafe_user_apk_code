@@ -5,6 +5,8 @@ import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/providers/cart_provider.dart';
 import '../../../core/providers/seat_selection_provider.dart';
+import '../../../core/providers/offers_provider.dart';
+import '../../../core/models/food_item.dart';
 import 'widgets/location_popup.dart';
 import '../../shared/widgets/safe_network_image.dart';
 import '../../shared/widgets/custom_bottom_nav_bar.dart';
@@ -25,6 +27,8 @@ class CartScreen extends ConsumerWidget {
       body: Column(
         children: [
           _buildAppBar(context),
+          // BOGO Upsell alert shelf
+          if (cart.items.isNotEmpty) _buildBogoAlerts(context, ref, cart.items),
           Expanded(
             child: cart.items.isEmpty
                 ? _buildEmptyState(context)
@@ -354,6 +358,7 @@ class CartScreen extends ConsumerWidget {
     final cartNotifier = ref.watch(cartProvider.notifier);
     final colorScheme = Theme.of(context).colorScheme;
     
+    final discount = cartNotifier.discount;
     final cgst = cartNotifier.cgst;
     final sgst = cartNotifier.sgst;
     final platformCharges = cartNotifier.platformCharges;
@@ -379,6 +384,10 @@ class CartScreen extends ConsumerWidget {
           children: [
             _summaryRow('Subtotal', '₹${subtotal.toStringAsFixed(2)}'),
             const SizedBox(height: 8),
+            if (discount > 0) ...[
+              _summaryRow('Promo Savings', '-₹${discount.toStringAsFixed(2)}', isPromo: true),
+              const SizedBox(height: 8),
+            ],
             _summaryRow('CGST (2.5%)', '₹${cgst.toStringAsFixed(2)}'),
             const SizedBox(height: 8),
             _summaryRow('SGST (2.5%)', '₹${sgst.toStringAsFixed(2)}'),
@@ -411,21 +420,160 @@ class CartScreen extends ConsumerWidget {
     );
   }
 
-  Widget _summaryRow(String label, String value, {bool isMain = false}) {
+  Widget _summaryRow(String label, String value, {bool isMain = false, bool isPromo = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           label,
-          style:
-              isMain ? AppTextStyles.headingMedium : AppTextStyles.bodyMedium,
+          style: isMain
+              ? AppTextStyles.headingMedium
+              : isPromo
+                  ? AppTextStyles.bodyMedium.copyWith(color: Colors.greenAccent, fontWeight: FontWeight.bold)
+                  : AppTextStyles.bodyMedium,
         ),
         Text(
           value,
-          style: isMain ? AppTextStyles.priceLarge : AppTextStyles.bodyLarge,
+          style: isMain
+              ? AppTextStyles.priceLarge
+              : isPromo
+                  ? AppTextStyles.bodyLarge.copyWith(color: Colors.greenAccent, fontWeight: FontWeight.w900)
+                  : AppTextStyles.bodyLarge,
         ),
       ],
     );
+  }
+
+  Widget _buildBogoAlerts(BuildContext context, WidgetRef ref, List<CartItem> cartItems) {
+    final offersState = ref.watch(offersProvider);
+    return offersState.when(
+      data: (offers) {
+        final alerts = _getBogoUpsells(cartItems, offers);
+        if (alerts.isEmpty) return const SizedBox.shrink();
+        
+        return Column(
+          children: alerts.map((alert) {
+            final missingQty = alert['missingQuantity'] as int;
+            final item = alert['item'] as FoodItem;
+            return Container(
+              margin: const EdgeInsets.only(left: 24, right: 24, top: 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Colors.amber.withOpacity(0.18), Colors.orange.withOpacity(0.08)],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                boxShadow: [
+                  BoxShadow(color: Colors.amber.withOpacity(0.05), blurRadius: 10)
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.amber.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.card_giftcard_rounded, color: Colors.amber, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'EXCLUSIVE BOGO REMINDER',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.amber[200],
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          alert['message'] as String,
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold, height: 1.3),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton(
+                    onPressed: () {
+                      ref.read(cartProvider.notifier).updateQuantity(item.id, missingQty);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Added $missingQty more ${item.name} to complete your BOGO!'),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.amber,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      minimumSize: Size.zero,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: Text(
+                      '+ ADD $missingQty',
+                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  List<Map<String, dynamic>> _getBogoUpsells(List<CartItem> cartItems, List<Map<String, dynamic>> activeOffers) {
+    final List<Map<String, dynamic>> alerts = [];
+    
+    for (final offer in activeOffers) {
+      final category = offer['category'] as String? ?? '';
+      if (!category.startsWith('BUY_')) continue;
+      
+      final buyQty = offer['buy_quantity'] as int? ?? 1;
+      final getQty = offer['get_quantity'] as int? ?? 1;
+      final blockSize = buyQty + getQty;
+      
+      final mappedItemIds = List<String>.from(
+        offer['offer_items']?.map((oi) => oi['food_item_id'] as String) ?? []
+      );
+      
+      int totalCartQty = 0;
+      CartItem? representativeItem;
+      
+      for (final item in cartItems) {
+        if (mappedItemIds.contains(item.foodItem.id)) {
+          totalCartQty += item.quantity;
+          representativeItem = item;
+        }
+      }
+      
+      if (totalCartQty > 0) {
+        final remainder = totalCartQty % blockSize;
+        if (remainder > 0 && remainder <= buyQty) {
+          final missingQty = blockSize - remainder;
+          alerts.add({
+            'offer': offer,
+            'item': representativeItem!.foodItem,
+            'missingQuantity': missingQty,
+            'message': 'Add $missingQty more ${representativeItem.foodItem.name}(s) to unlock your "${offer['title']}" BOGO free deal!',
+          });
+        }
+      }
+    }
+    
+    return alerts;
   }
 
   void _showLocationSelection(BuildContext context, WidgetRef ref) {

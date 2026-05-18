@@ -5,6 +5,7 @@ import '../models/food_item.dart';
 import '../models/cinema_hall.dart';
 import '../models/combo_model.dart';
 import '../providers/reorder_provider.dart';
+import '../models/order_model.dart';
 
 class SupabaseService {
   final _client = Supabase.instance.client;
@@ -84,6 +85,7 @@ class SupabaseService {
     required String location,
     required String customerPhone,
     required String displayId,
+    required PaymentMethod paymentMethod,
     int? pointsRedeemed,
     int? pointsEarned,
     String? authUserId,
@@ -102,7 +104,7 @@ class SupabaseService {
       'points_earned': pointsEarned ?? 0,
       'status': 'PENDING',
       'payment_status': 'PAID',
-      'payment_method': 'DEMO_UPI',
+      'payment_method': paymentMethod.name,
       'timestamp': DateTime.now().toUtc().toIso8601String(),
       'is_demo_order': true,
       'client_uuid': clientUuid,
@@ -120,32 +122,23 @@ class SupabaseService {
     }
 
     try {
-      print('Calling Backend API for Order: ${BackendConfig.backendApiUrl}/api/orders/create');
+      print('Calling Secure RPC directly on Supabase (Bypassing Backend API)...');
       
-      final response = await _dio.post(
-        '/api/orders/create',
-        data: orderData,
-        options: Options(
-          headers: {
-            'x-idempotency-key': clientUuid ?? displayId,
-          },
-        ),
-      );
-
-      if (response.statusCode == 202 || response.statusCode == 200) {
-        print('Backend Order Success: ${response.data}');
-        // Note: The backend returns the idempotency key or a success msg
-        // The actual order is processed asynchronously via Redis queue.
-        // We return the displayId or a dummy ID to keep the Flutter UI happy
-        // until realtime updates the state.
-        return displayId; 
-      }
-      throw Exception('Failed to place order: ${response.data}');
+      final String orderId = await _client.rpc('place_order_secure', params: {
+        'p_cinema_id': cinemaId,
+        'p_display_id': displayId,
+        'p_items': items,
+        'p_total_amount': totalAmount,
+        'p_location': "APK, $location",
+        'p_customer_phone': customerPhone,
+        'p_payment_method': paymentMethod.name,
+        'p_customer_profile_id': customerProfileId,
+      });
+      
+      print('Direct RPC Order Success: $orderId');
+      return orderId;
     } catch (e) {
-      print('SupabaseService.placeOrder ERROR: $e');
-      if (e is DioException) {
-        print('Dio Details: ${e.response?.data}');
-      }
+      print('SupabaseService.placeOrder RPC ERROR: $e');
       rethrow;
     }
   }
@@ -177,10 +170,12 @@ class SupabaseService {
       query = query.eq('cinema_id', cinemaId);
     }
     
-    if (customerId != null && customerPhone != null) {
-      query = query.or('customer_id.eq.$customerId,customer_phone.eq.$customerPhone');
-    } else if (customerId != null) {
-      query = query.eq('customer_id', customerId);
+    if (customerId != null && !customerId.startsWith('TEMP')) {
+      if (customerPhone != null) {
+        query = query.or('customer_id.eq.$customerId,customer_phone.eq.$customerPhone');
+      } else {
+        query = query.eq('customer_id', customerId);
+      }
     } else if (customerPhone != null) {
       query = query.eq('customer_phone', customerPhone);
     }

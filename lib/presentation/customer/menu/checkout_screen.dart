@@ -52,6 +52,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     
     final grandTotal = baseTotal - actualRedeemValue;
 
+    final allowedMethods = seatSelection.allowedPaymentMethods ?? ['DEMO_UPI', 'DEMO_CARD', 'PAY_ON_DELIVERY'];
+    if (!allowedMethods.contains(_selectedMethod.name)) {
+      if (allowedMethods.isNotEmpty) {
+        _selectedMethod = PaymentMethod.values.firstWhere(
+          (m) => m.name == allowedMethods.first,
+          orElse: () => PaymentMethod.PAY_ON_DELIVERY,
+        );
+      }
+    }
+
     return Scaffold(
       backgroundColor: colorScheme.background,
       appBar: AppBar(
@@ -103,7 +113,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             ],
 
             _buildSectionTitle('Payment Method'),
-            _buildPaymentMethods(),
+            _buildPaymentMethods(seatSelection.allowedPaymentMethods),
             const SizedBox(height: 40),
             
             _buildPriceBreakdown(subtotal, cgst, sgst, platformFee, actualRedeemValue, grandTotal),
@@ -264,12 +274,21 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Widget _buildPaymentMethods() {
+  Widget _buildPaymentMethods(List<String>? allowedMethods) {
+    final methods = allowedMethods ?? ['DEMO_UPI', 'DEMO_CARD', 'PAY_ON_DELIVERY'];
     return Column(
       children: [
-        _paymentTile(PaymentMethod.DEMO_UPI, 'UPI / QR Scan', Icons.qr_code_rounded),
-        const SizedBox(height: 12),
-        _paymentTile(PaymentMethod.DEMO_CARD, 'Credit / Debit Card', Icons.credit_card_rounded),
+        if (methods.contains('DEMO_UPI')) ...[
+          _paymentTile(PaymentMethod.DEMO_UPI, 'UPI / QR Scan', Icons.qr_code_rounded),
+          const SizedBox(height: 12),
+        ],
+        if (methods.contains('DEMO_CARD')) ...[
+          _paymentTile(PaymentMethod.DEMO_CARD, 'Credit / Debit Card', Icons.credit_card_rounded),
+          const SizedBox(height: 12),
+        ],
+        if (methods.contains('PAY_ON_DELIVERY')) ...[
+          _paymentTile(PaymentMethod.PAY_ON_DELIVERY, 'Pay on Delivery', Icons.handshake_rounded),
+        ],
       ],
     );
   }
@@ -342,7 +361,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
       decoration: BoxDecoration(color: colorScheme.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(32))),
       child: PrimaryButton(
-        text: _isLoading ? 'PROCESSING...' : (grandTotal == 0 ? 'PLACE ORDER' : 'PAY ₹${grandTotal.toStringAsFixed(0)}'),
+        text: _isLoading ? 'PROCESSING...' : (_selectedMethod == PaymentMethod.PAY_ON_DELIVERY || grandTotal == 0 ? 'PLACE ORDER' : 'PAY ₹${grandTotal.toStringAsFixed(0)}'),
         onPressed: (_isLoading || ref.watch(cartProvider).isValidating) ? null : () => _processPayment(grandTotal, pointsToRedeem),
       ),
     );
@@ -386,7 +405,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text('YES, PAY NOW'),
+            child: Text(_selectedMethod == PaymentMethod.PAY_ON_DELIVERY ? 'YES, CONFIRM' : 'YES, PAY NOW'),
           ),
         ],
       ),
@@ -407,16 +426,21 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       final platformFee = cartNotifier.platformCharges;
 
       // Feature 1+2: Include note, isCombo, comboId, comboName in each OrderItem
-      final orderItems = cart.items.map((item) => OrderItem(
-        foodItem: item.foodItem,
-        quantity: item.quantity,
-        note: item.note,
-        isCombo: item.isCombo,
-        comboId: item.comboId,
-        comboName: item.comboName,
-      )).toList();
+      int itemCounter = 0;
+      final orderItems = cart.items.map((item) {
+        final idx = itemCounter++;
+        return OrderItem(
+          itemId: '${item.foodItem.id}_${DateTime.now().microsecondsSinceEpoch}_$idx',
+          foodItem: item.foodItem,
+          quantity: item.quantity,
+          note: item.note,
+          isCombo: item.isCombo,
+          comboId: item.comboId,
+          comboName: item.comboName,
+        );
+      }).toList();
 
-      await ref.read(ordersProvider.notifier).placeOrder(
+      final order = await ref.read(ordersProvider.notifier).placeOrder(
         orderItems,
         grandTotal,
         seatSelection.displayLabel,
@@ -431,7 +455,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         },
       );
 
-      final latestOrder = ref.read(ordersProvider).first;
+      if (order == null) throw Exception('Order could not be verified. Please check your connection.');
+      final latestOrder = order;
       
       ref.read(cartProvider.notifier).clearCart();
       if (mounted) {

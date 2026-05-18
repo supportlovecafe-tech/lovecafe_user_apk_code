@@ -89,13 +89,41 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   void _listenToAuthChanges() {
-    _ref.read(authServiceProvider).authStateChanges.listen((event) {
+    _ref.read(authServiceProvider).authStateChanges.listen((event) async {
       final user = event.session?.user;
       if (user != null) {
-        state = AuthState.authenticated(
-          id: user.id,
-          email: user.email,
-        );
+        try {
+          final client = _ref.read(authServiceProvider).client;
+          var profile = await client
+              .from('profiles')
+              .select()
+              .eq('id', user.id)
+              .maybeSingle();
+
+          profile ??= await client
+              .from('customer_profiles')
+              .select()
+              .eq('id', user.id)
+              .maybeSingle();
+
+          final String? firstName = profile?['first_name'];
+          final String? lastName = profile?['last_name'];
+          final String? fullName = profile?['full_name'] ?? 
+              ((firstName != null || lastName != null) ? '${firstName ?? ''} ${lastName ?? ''}'.trim() : null);
+
+          state = AuthState.authenticated(
+            id: user.id,
+            email: user.email ?? profile?['email'],
+            userName: fullName,
+            phone: profile?['phone'] ?? user.phone,
+            avatarUrl: profile?['avatar_url'],
+          );
+        } catch (e) {
+          state = AuthState.authenticated(
+            id: user.id,
+            email: user.email,
+          );
+        }
         _persistState();
       } else if (!state.isDemo && state.status == AuthStatus.AUTHENTICATED) {
         state = AuthState.unauthenticated();

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'menu_provider.dart';
 import 'auth_provider.dart';
 
@@ -9,12 +10,14 @@ class SeatSelectionState {
   final String? hallName;
   final String? screenName;
   final String? seatLabel;
+  final List<String>? allowedPaymentMethods;
 
   const SeatSelectionState({
     this.hallId,
     this.hallName,
     this.screenName,
     this.seatLabel,
+    this.allowedPaymentMethods,
   });
 
   bool get isComplete =>
@@ -33,12 +36,14 @@ class SeatSelectionState {
     String? hallName,
     String? screenName,
     String? seatLabel,
+    List<String>? allowedPaymentMethods,
   }) {
     return SeatSelectionState(
       hallId: hallId ?? this.hallId,
       hallName: hallName ?? this.hallName,
       screenName: screenName ?? this.screenName,
       seatLabel: seatLabel ?? this.seatLabel,
+      allowedPaymentMethods: allowedPaymentMethods ?? this.allowedPaymentMethods,
     );
   }
 
@@ -48,6 +53,7 @@ class SeatSelectionState {
       'hallName': hallName,
       'screenName': screenName,
       'seatLabel': seatLabel,
+      'allowedPaymentMethods': allowedPaymentMethods,
     };
   }
 
@@ -57,6 +63,9 @@ class SeatSelectionState {
       hallName: map['hallName'],
       screenName: map['screenName'],
       seatLabel: map['seatLabel'],
+      allowedPaymentMethods: map['allowedPaymentMethods'] != null 
+          ? List<String>.from(map['allowedPaymentMethods']) 
+          : null,
     );
   }
 }
@@ -81,9 +90,25 @@ class SeatSelectionNotifier extends StateNotifier<SeatSelectionState> {
     final saved = prefs.getString(_storageKey);
     if (saved != null) {
       try {
-        state = SeatSelectionState.fromMap(jsonDecode(saved));
-        if (state.hallId != null) {
+        var restoredState = SeatSelectionState.fromMap(jsonDecode(saved));
+        if (restoredState.hallId != null) {
+          try {
+            final response = await Supabase.instance.client
+                .from('cinemas')
+                .select('allowed_payment_methods')
+                .eq('id', restoredState.hallId!)
+                .single();
+            if (response['allowed_payment_methods'] != null) {
+              final methods = List<String>.from(response['allowed_payment_methods']);
+              restoredState = restoredState.copyWith(allowedPaymentMethods: methods);
+            }
+          } catch (e) {
+            print('Error fetching updated payment methods on restore: $e');
+          }
+          state = restoredState;
           _ref.read(menuProvider.notifier).refreshMenu(state.hallId!);
+        } else {
+          state = restoredState;
         }
       } catch (e) {
         print('Error restoring seat selection: $e');
@@ -91,17 +116,32 @@ class SeatSelectionNotifier extends StateNotifier<SeatSelectionState> {
     }
   }
 
-  void updateSelection({
+  Future<void> updateSelection({
     required String hallId,
     required String hallName,
     required String screenName,
     required String seatLabel,
-  }) {
+  }) async {
+    List<String>? methods = ['DEMO_UPI', 'DEMO_CARD', 'PAY_ON_DELIVERY'];
+    try {
+      final response = await Supabase.instance.client
+          .from('cinemas')
+          .select('allowed_payment_methods')
+          .eq('id', hallId)
+          .single();
+      if (response['allowed_payment_methods'] != null) {
+        methods = List<String>.from(response['allowed_payment_methods']);
+      }
+    } catch (e) {
+      print('Error fetching payment methods: $e');
+    }
+
     state = SeatSelectionState(
       hallId: hallId,
       hallName: hallName,
       screenName: screenName,
       seatLabel: seatLabel,
+      allowedPaymentMethods: methods,
     );
     _persistSelection();
     

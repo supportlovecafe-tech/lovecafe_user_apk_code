@@ -1,7 +1,9 @@
 import 'dart:ui';
+import 'dart:async';
 import '../loyalty/cinepoints_history_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/providers/offers_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -33,10 +35,15 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _hasShownLocationPopup = false;
   String _searchQuery = '';
+  late PageController _pageController;
+  Timer? _carouselTimer;
+  int _currentPage = 0;
 
   @override
   void initState() {
     super.initState();
+    _pageController = PageController(initialPage: 0);
+    _startCarouselTimer();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final selection = ref.read(seatSelectionProvider);
       if (!selection.isComplete && !_hasShownLocationPopup) {
@@ -46,6 +53,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       }
       if (selection.isComplete && ref.read(menuProvider).items.isEmpty) {
         ref.read(menuProvider.notifier).refreshMenu(selection.hallId!);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    _carouselTimer?.cancel();
+    super.dispose();
+  }
+
+  void _startCarouselTimer() {
+    _carouselTimer?.cancel();
+    _carouselTimer = Timer.periodic(const Duration(seconds: 5), (timer) {
+      final offers = ref.read(offersProvider).value ?? [];
+      if (offers.length > 1) {
+        _currentPage = (_currentPage + 1) % offers.length;
+        if (_pageController.hasClients) {
+          _pageController.animateToPage(
+            _currentPage,
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeInOut,
+          );
+        }
       }
     });
   }
@@ -217,7 +248,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             physics: const BouncingScrollPhysics(),
             slivers: [
               _buildAppBar(context, selection),
-              _buildHeroSpotlight(context, selection),
+              ref.watch(offersProvider).when(
+                data: (offersList) => _buildHeroSpotlight(context, selection, offersList),
+                loading: () => const SliverToBoxAdapter(
+                  child: SizedBox(
+                    height: 220,
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                ),
+                error: (_, __) => _buildHeroSpotlight(context, selection, const []),
+              ),
               if (!selection.isComplete)
                 _buildEmptyCinemaState(context)
               else ...[
@@ -264,33 +304,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           children: [
             Image.asset(
               'assets/logo_transparent.png',
-              height: 32,
+              height: 56,
               filterQuality: FilterQuality.high,
               fit: BoxFit.contain,
             ),
             const SizedBox(height: 4),
             Row(
               children: [
-                Text(
-                  'PREMIUM DINING',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    letterSpacing: 1,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface.withOpacity(0.5),
-                  ),
-                ),
                 if (seatSelection.isComplete) ...[
-                  Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 6),
-                    width: 4,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
                   Icon(Icons.location_on_rounded, size: 12, color: colorScheme.primary),
-                  const SizedBox(width: 2),
+                  const SizedBox(width: 4),
                   Flexible(
                     child: Text(
                       seatSelection.displayLabel,
@@ -437,79 +460,192 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildHeroSpotlight(BuildContext context, SeatSelectionState selection) {
-    return SliverToBoxAdapter(
-      child: Container(
-        height: 220,
-        margin: const EdgeInsets.symmetric(horizontal: 24),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
-          color: AppColors.surfaceDark.withOpacity(0.4),
-          border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withOpacity(0.2),
-              blurRadius: 30,
-              spreadRadius: 5,
-              offset: const Offset(0, 10),
+  Widget _buildHeroSpotlight(BuildContext context, SeatSelectionState selection, List<Map<String, dynamic>> offers) {
+    if (offers.isEmpty) {
+      return SliverToBoxAdapter(
+        child: Container(
+          height: 220,
+          margin: const EdgeInsets.symmetric(horizontal: 24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(32),
+            color: AppColors.surfaceDark.withOpacity(0.4),
+            border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primary.withOpacity(0.2),
+                blurRadius: 30,
+                spreadRadius: 5,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(32),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Image.network(
+                      'https://images.unsplash.com/photo-1513106580091-1d82408b8cd6?w=800',
+                      fit: BoxFit.cover,
+                      opacity: const AlwaysStoppedAnimation(0.3),
+                    ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+                     .scale(begin: const Offset(1.0, 1.0), end: const Offset(1.05, 1.05), duration: 10.seconds),
+                  ),
+                  Positioned(
+                    right: -50,
+                    top: -50,
+                    child: Container(
+                      width: 150,
+                      height: 150,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                           BoxShadow(color: AppColors.secondary.withOpacity(0.4), blurRadius: 100)
+                        ]
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(32.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.accent.withOpacity(0.2),
+                            border: Border.all(color: AppColors.accent.withOpacity(0.5)),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text('NEON DEAL', style: TextStyle(color: AppColors.accent, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                        ).animate().shimmer(duration: 2.seconds, delay: 1.seconds),
+                        const SizedBox(height: 12),
+                        const Text('50% OFF\nOn Cinema Combos', style: TextStyle(color: Colors.white, fontSize: 24, height: 1.1, fontWeight: FontWeight.w900)),
+                        const SizedBox(height: 8),
+                        Text('Use code: GLOW50', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(32),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: Image.network(
-                    'https://images.unsplash.com/photo-1513106580091-1d82408b8cd6?w=800',
-                    fit: BoxFit.cover,
-                    opacity: const AlwaysStoppedAnimation(0.3),
-                  ).animate(onPlay: (controller) => controller.repeat(reverse: true))
-                   .scale(begin: const Offset(1.0, 1.0), end: const Offset(1.05, 1.05), duration: 10.seconds),
+          ),
+        ).animate().fadeIn(duration: 500.ms).scale(begin: const Offset(0.9, 0.9), end: const Offset(1.0, 1.0)),
+      );
+    }
+
+    return SliverToBoxAdapter(
+      child: SizedBox(
+        height: 220,
+        child: PageView.builder(
+          controller: _pageController,
+          onPageChanged: (index) {
+            _currentPage = index;
+          },
+          itemCount: offers.length,
+          itemBuilder: (context, index) {
+            final offer = offers[index];
+            final category = offer['category'] as String? ?? 'OFFER';
+            final title = offer['title'] as String? ?? 'Special Offer';
+            final description = offer['description'] as String? ?? 'Special promotion deal.';
+            
+            // Format category badge label nicely
+            String badgeText = category.replaceAll('_', ' ');
+            if (category == 'BUY_1_GET_1') badgeText = 'BUY 1 GET 1';
+            else if (category == 'BUY_1_GET_2') badgeText = 'BUY 1 GET 2';
+            else if (category == 'BUY_2_GET_1') badgeText = 'BUY 2 GET 1';
+
+            // Background images related to category
+            String imageUrl = 'https://images.unsplash.com/photo-1513106580091-1d82408b8cd6?w=800'; // popcorn
+            if (category == 'UNLIMITED') {
+              imageUrl = 'https://images.unsplash.com/photo-1437419764061-2473afe69fc2?w=800'; // cold drinks/water
+            } else if (category.contains('FESTIVAL')) {
+              imageUrl = 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800'; // festival/party
+            } else if (category.contains('FILM')) {
+              imageUrl = 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800'; // cinema hall
+            }
+
+            return GestureDetector(
+              onTap: () {
+                context.push('/menu', extra: offer);
+              },
+              child: Container(
+                margin: const EdgeInsets.symmetric(horizontal: 24),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(32),
+                  color: AppColors.surfaceDark.withOpacity(0.4),
+                  border: Border.all(color: AppColors.primary.withOpacity(0.2)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.primary.withOpacity(0.2),
+                      blurRadius: 30,
+                      spreadRadius: 5,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
                 ),
-                Positioned(
-                  right: -50,
-                  top: -50,
-                  child: Container(
-                    width: 150,
-                    height: 150,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                         BoxShadow(color: AppColors.secondary.withOpacity(0.4), blurRadius: 100)
-                      ]
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(32),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                    child: Stack(
+                      children: [
+                        Positioned.fill(
+                          child: Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            opacity: const AlwaysStoppedAnimation(0.3),
+                          ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+                           .scale(begin: const Offset(1.0, 1.0), end: const Offset(1.05, 1.05), duration: 10.seconds),
+                        ),
+                        Positioned(
+                          right: -50,
+                          top: -50,
+                          child: Container(
+                            width: 150,
+                            height: 150,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                 BoxShadow(color: AppColors.secondary.withOpacity(0.4), blurRadius: 100)
+                              ]
+                            ),
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(32.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.accent.withOpacity(0.2),
+                                  border: Border.all(color: AppColors.accent.withOpacity(0.5)),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(badgeText, style: TextStyle(color: AppColors.accent, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
+                              ).animate().shimmer(duration: 2.seconds, delay: 1.seconds),
+                              const SizedBox(height: 12),
+                              Text(title, style: const TextStyle(color: Colors.white, fontSize: 22, height: 1.1, fontWeight: FontWeight.w900)),
+                              const SizedBox(height: 8),
+                              Text(description, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 11, fontWeight: FontWeight.bold), maxLines: 2, overflow: TextOverflow.ellipsis),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(32.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: AppColors.accent.withOpacity(0.2),
-                          border: Border.all(color: AppColors.accent.withOpacity(0.5)),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text('NEON DEAL', style: TextStyle(color: AppColors.accent, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1)),
-                      ).animate().shimmer(duration: 2.seconds, delay: 1.seconds),
-                      const SizedBox(height: 12),
-                      const Text('50% OFF\nOn Cinema Combos', style: TextStyle(color: Colors.white, fontSize: 24, height: 1.1, fontWeight: FontWeight.w900)),
-                      const SizedBox(height: 8),
-                      Text('Use code: GLOW50', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ).animate().fadeIn(duration: 500.ms),
+            );
+          },
         ),
-      ).animate().fadeIn(duration: 500.ms).scale(begin: const Offset(0.9, 0.9), end: const Offset(1.0, 1.0)),
+      ),
     );
   }
 
