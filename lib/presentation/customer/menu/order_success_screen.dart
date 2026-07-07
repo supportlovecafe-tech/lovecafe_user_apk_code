@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_text_styles.dart';
 
 class OrderSuccessScreen extends StatefulWidget {
   final Map<String, dynamic>? extra;
@@ -55,7 +54,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
                 'Your delicious meal is being prepared.\nRedirecting to tracking in 5s...',
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge?.copyWith(
-                  color: Colors.white.withOpacity(0.6),
+                  color: Colors.white.withValues(alpha: 0.6),
                 ),
               ).animate().fadeIn(delay: 600.ms),
               const SizedBox(height: 48),
@@ -75,12 +74,12 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
       width: 120,
       height: 120,
       decoration: BoxDecoration(
-        color: AppColors.success.withOpacity(0.1),
+        color: AppColors.success.withValues(alpha: 0.1),
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.success.withOpacity(0.5), width: 2),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.5), width: 2),
         boxShadow: [
           BoxShadow(
-            color: AppColors.success.withOpacity(0.3),
+            color: AppColors.success.withValues(alpha: 0.3),
             blurRadius: 40,
             spreadRadius: 10,
           )
@@ -98,12 +97,12 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
       BuildContext context, String orderId, String location, dynamic total) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceDark.withOpacity(0.4),
+        color: AppColors.surfaceDark.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(32),
         border: Border.all(color: AppColors.borderDark),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.5),
+            color: Colors.black.withValues(alpha: 0.5),
             blurRadius: 30,
             offset: const Offset(0, 10),
           ),
@@ -121,7 +120,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
                 const SizedBox(height: 24),
                 _infoRow(context, 'Location', location),
                 const SizedBox(height: 24),
-                Divider(color: AppColors.borderDark.withOpacity(0.5)),
+                Divider(color: AppColors.borderDark.withValues(alpha: 0.5)),
                 const SizedBox(height: 24),
                 _infoRow(context, 'Total Paid', '₹$total', isBold: true),
               ],
@@ -143,7 +142,7 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
         Text(
           label,
           style: theme.textTheme.bodyMedium?.copyWith(
-            color: Colors.white.withOpacity(0.5),
+            color: Colors.white.withValues(alpha: 0.5),
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -178,12 +177,12 @@ class _OrderSuccessScreenState extends State<OrderSuccessScreen> {
             width: double.infinity,
             padding: const EdgeInsets.symmetric(vertical: 20),
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.2),
+              color: AppColors.primary.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(color: AppColors.primary),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withOpacity(0.3),
+                  color: AppColors.primary.withValues(alpha: 0.3),
                   blurRadius: 20,
                 ),
               ],

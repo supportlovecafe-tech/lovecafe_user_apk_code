@@ -4,7 +4,6 @@ import '../models/food_item.dart';
 import 'supabase_provider.dart';
 import 'auth_provider.dart';
 import '../services/cache_service.dart';
-import '../services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'cart_provider.dart';
 

@@ -17,6 +17,8 @@ class CartItem {
   final bool isCombo;
   final String? comboId;
   final String? comboName;
+  final bool isOffer;
+  final String? offerId;
 
   CartItem({
     required this.foodItem,
@@ -25,6 +27,8 @@ class CartItem {
     this.isCombo = false,
     this.comboId,
     this.comboName,
+    this.isOffer = false,
+    this.offerId,
   });
 
   CartItem copyWith({int? quantity, String? note}) {
@@ -35,6 +39,8 @@ class CartItem {
       isCombo: isCombo,
       comboId: comboId,
       comboName: comboName,
+      isOffer: isOffer,
+      offerId: offerId,
     );
   }
 
@@ -46,6 +52,8 @@ class CartItem {
       'isCombo': isCombo,
       'comboId': comboId,
       'comboName': comboName,
+      'isOffer': isOffer,
+      'offerId': offerId,
     };
   }
 
@@ -57,6 +65,8 @@ class CartItem {
       isCombo: map['isCombo'] as bool? ?? false,
       comboId: map['comboId'],
       comboName: map['comboName'],
+      isOffer: map['isOffer'] as bool? ?? false,
+      offerId: map['offerId'],
     );
   }
 }
@@ -139,7 +149,8 @@ class CartNotifier extends StateNotifier<CartState> {
             'id': i.isCombo ? i.comboId : i.foodItem.id,
             'name': i.isCombo ? i.comboName : i.foodItem.name,
             'quantity': i.quantity,
-            'is_combo': i.isCombo
+            'is_combo': i.isCombo,
+            'offer_id': i.offerId,
         }).toList();
 
         final response = await supabaseService.validateOrder(apiItems, cinemaId);
@@ -166,25 +177,52 @@ class CartNotifier extends StateNotifier<CartState> {
           if (cinemaId != null) {
             final offersResp = await Supabase.instance.client
                 .from('offers')
-                .select('*, offer_items(food_item_id)')
+                .select('*, offer_items(food_item_id, custom_price)')
                 .eq('cinema_id', cinemaId)
                 .eq('is_active', true);
             activeOffers = List<Map<String, dynamic>>.from(offersResp);
           }
 
-          // Build a set of item IDs for each offer
+          double customPlatformPercent = 1.0;
+          List<String> applicableCategories = ['ALL'];
+          try {
+            final feeResp = await Supabase.instance.client
+                .from('global_settings')
+                .select('value')
+                .eq('key', 'platform_fees')
+                .single();
+            if (feeResp['value'] != null) {
+              final val = Map<String, dynamic>.from(feeResp['value'] as Map);
+              customPlatformPercent = (val['online_fee_percent'] as num?)?.toDouble() ?? 1.0;
+              applicableCategories = List<String>.from(val['applicable_categories'] ?? ['ALL']);
+            }
+          } catch (feeErr) {
+            print('Could not load global platform fee settings in fallback: $feeErr');
+          }
+
+          // Build a set of item IDs and custom prices for each offer
           final offerItemSets = <String, Set<String>>{};
+          final offerItemPrices = <String, Map<String, double>>{};
           for (final offer in activeOffers) {
             final offerItemsList = offer['offer_items'] as List? ?? [];
             offerItemSets[offer['id'] as String] = offerItemsList
                 .map((oi) => oi['food_item_id'].toString())
                 .toSet();
+            
+            final priceMap = <String, double>{};
+            for (final oi in offerItemsList) {
+              if (oi['custom_price'] != null) {
+                priceMap[oi['food_item_id'].toString()] = (oi['custom_price'] as num).toDouble();
+              }
+            }
+            offerItemPrices[offer['id'] as String] = priceMap;
           }
 
           double grossSubtotal = 0;
           double totalDiscount = 0;
           double netTaxableSubtotal = 0;
           double netSubtotal = 0;
+          double feeTaxableSubtotal = 0;
 
           for (final cartItem in state.items) {
             final price = cartItem.foodItem.price;
@@ -203,6 +241,12 @@ class CartNotifier extends StateNotifier<CartState> {
               if (!mappedIds.contains(itemId)) continue;
 
               final category = offer['category'] as String? ?? '';
+              
+              // Only apply UNLIMITED offer if the item was explicitly added via this offer
+              if (category == 'UNLIMITED' && cartItem.offerId != offer['id']) {
+                continue;
+              }
+
               double currentDiscount = 0;
 
               switch (category) {
@@ -222,7 +266,8 @@ class CartNotifier extends StateNotifier<CartState> {
                   currentDiscount = freeCount * price;
                   break;
                 case 'UNLIMITED':
-                  final promoPrice = (offer['promo_price'] as num?)?.toDouble();
+                  final customPrice = offerItemPrices[offer['id'] as String]?[itemId];
+                  final promoPrice = customPrice ?? (offer['promo_price'] as num?)?.toDouble();
                   if (promoPrice != null && price > promoPrice) {
                     currentDiscount = (price - promoPrice) * quantity;
                   }
@@ -236,7 +281,8 @@ class CartNotifier extends StateNotifier<CartState> {
                 case 'OFFER_OF_THE_FESTIVAL':
                 case 'OFFER_OF_THE_FILM':
                   final pct = (offer['discount_percentage'] as num?)?.toDouble() ?? 0;
-                  final promoP = (offer['promo_price'] as num?)?.toDouble();
+                  final customPrice = offerItemPrices[offer['id'] as String]?[itemId];
+                  final promoP = customPrice ?? (offer['promo_price'] as num?)?.toDouble();
                   final flatA = (offer['flat_discount_amount'] as num?)?.toDouble() ?? 0;
                   if (pct > 0) {
                     currentDiscount = itemGross * (pct / 100);
@@ -259,11 +305,17 @@ class CartNotifier extends StateNotifier<CartState> {
             if (cartItem.foodItem.applyGst) {
               netTaxableSubtotal += itemNet;
             }
+
+            final category = (cartItem.foodItem.category).toUpperCase();
+            final isCombo = cartItem.isCombo;
+            if (applicableCategories.contains('ALL') || (!isCombo && applicableCategories.contains(category))) {
+              feeTaxableSubtotal += itemNet;
+            }
           }
 
           final cgst = netTaxableSubtotal * 0.025;
           final sgst = netTaxableSubtotal * 0.025;
-          final platformCharges = netSubtotal * 0.01;
+          final platformCharges = feeTaxableSubtotal * (customPlatformPercent / 100);
           state = state.copyWith(
             breakdown: CartBreakdown(
               subtotal: grossSubtotal,
@@ -271,6 +323,7 @@ class CartNotifier extends StateNotifier<CartState> {
               cgst: cgst,
               sgst: sgst,
               platformCharges: platformCharges,
+              platformFeePercent: customPlatformPercent,
               total: netSubtotal + cgst + sgst + platformCharges,
             ),
             isValidating: false,
@@ -278,17 +331,47 @@ class CartNotifier extends StateNotifier<CartState> {
         } catch (fallbackErr) {
           // Last-resort: plain arithmetic, no discounts
           print('Offer-aware fallback also failed: $fallbackErr — using plain subtotal');
+          
+          double customPlatformPercent = 1.0;
+          List<String> applicableCategories = ['ALL'];
+          try {
+            final feeResp = await Supabase.instance.client
+                .from('global_settings')
+                .select('value')
+                .eq('key', 'platform_fees')
+                .single();
+            if (feeResp['value'] != null) {
+              final val = Map<String, dynamic>.from(feeResp['value'] as Map);
+              customPlatformPercent = (val['online_fee_percent'] as num?)?.toDouble() ?? 1.0;
+              applicableCategories = List<String>.from(val['applicable_categories'] ?? ['ALL']);
+            }
+          } catch (feeErr) {
+            print('Could not load global platform fee settings in last-resort fallback: $feeErr');
+          }
+
           final st = state.items.fold(0.0, (sum, item) => sum + (item.foodItem.price * item.quantity));
           final taxableSt = state.items.where((item) => item.foodItem.applyGst).fold(0.0, (sum, item) => sum + (item.foodItem.price * item.quantity));
+          
+          double feeTaxableSubtotal = 0;
+          for (final cartItem in state.items) {
+            final itemNet = cartItem.foodItem.price * cartItem.quantity;
+            final category = (cartItem.foodItem.category).toUpperCase();
+            final isCombo = cartItem.isCombo;
+            if (applicableCategories.contains('ALL') || (!isCombo && applicableCategories.contains(category))) {
+              feeTaxableSubtotal += itemNet;
+            }
+          }
+
           final cgst = taxableSt * 0.025;
           final sgst = taxableSt * 0.025;
-          final platformCharges = st * 0.01;
+          final platformCharges = feeTaxableSubtotal * (customPlatformPercent / 100);
           state = state.copyWith(
             breakdown: CartBreakdown(
               subtotal: st,
               cgst: cgst,
               sgst: sgst,
               platformCharges: platformCharges,
+              platformFeePercent: customPlatformPercent,
               total: st + cgst + sgst + platformCharges,
             ),
             isValidating: false,
@@ -297,7 +380,7 @@ class CartNotifier extends StateNotifier<CartState> {
     }
   }
 
-  void addItem(FoodItem item) {
+  void addItem(FoodItem item, {String? offerId}) {
     if (state.items.isNotEmpty && item.cinemaId != null) {
       final existingCinemaId = state.items.first.foodItem.cinemaId;
       if (existingCinemaId != null && existingCinemaId != item.cinemaId) {
@@ -306,7 +389,7 @@ class CartNotifier extends StateNotifier<CartState> {
     }
 
     final existingIndex =
-        state.items.indexWhere((element) => element.foodItem.id == item.id && !element.isCombo);
+        state.items.indexWhere((element) => element.foodItem.id == item.id && !element.isCombo && element.offerId == offerId);
     if (existingIndex != -1) {
       state = state.copyWith(items: [
         for (int i = 0; i < state.items.length; i++)
@@ -316,7 +399,7 @@ class CartNotifier extends StateNotifier<CartState> {
             state.items[i]
       ]);
     } else {
-      state = state.copyWith(items: [...state.items, CartItem(foodItem: item, quantity: 1, note: null)]);
+      state = state.copyWith(items: [...state.items, CartItem(foodItem: item, quantity: 1, note: null, isOffer: offerId != null, offerId: offerId)]);
     }
     _saveCart();
     _fetchBreakdown();
@@ -371,8 +454,8 @@ class CartNotifier extends StateNotifier<CartState> {
     _fetchBreakdown();
   }
 
-  void validateAndAddItem(FoodItem item, String? currentHallId) {
-    addItem(item);
+  void validateAndAddItem(FoodItem item, String? currentHallId, {String? offerId}) {
+    addItem(item, offerId: offerId);
   }
 
   void removeItem(String itemId) {
@@ -411,6 +494,7 @@ class CartNotifier extends StateNotifier<CartState> {
   double get cgst => state.breakdown.cgst;
   double get sgst => state.breakdown.sgst;
   double get platformCharges => state.breakdown.platformCharges;
+  double get platformFeePercent => state.breakdown.platformFeePercent;
   double get totalAmount => state.breakdown.total;
 
   void validateAvailability(List<FoodItem> freshMenu) {

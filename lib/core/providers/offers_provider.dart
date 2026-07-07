@@ -13,7 +13,7 @@ final offersProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   try {
     final response = await Supabase.instance.client
         .from('offers')
-        .select('*, offer_items(food_item_id)')
+        .select('*, offer_items(food_item_id, custom_price)')
         .eq('cinema_id', selection.hallId!)
         .eq('is_active', true)
         .order('created_at', ascending: false);

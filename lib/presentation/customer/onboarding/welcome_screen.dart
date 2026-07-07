@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:carousel_slider/carousel_slider.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_text_styles.dart';
-import '../../../core/providers/auth_provider.dart';
 import '../../shared/widgets/safe_network_image.dart';
 
 class WelcomeScreen extends ConsumerStatefulWidget {
@@ -20,7 +17,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
 
   final List<Map<String, String>> _slides = [
     {
-      'title': 'GOURMET\nDELIGHTS',
+      'title': 'LOVE\nCAFE',
       'subtitle': 'Elevate your movie night with chef-crafted snacks and gourmet meals.',
       'image': 'https://images.unsplash.com/photo-1594007654729-407eedc4be65?w=1200&q=80',
     },
@@ -42,7 +39,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: colorScheme.surface,
       body: Stack(
         children: [
           // Carousel Background
@@ -73,9 +70,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                             begin: Alignment.topCenter,
                             end: Alignment.bottomCenter,
                             colors: [
-                              Colors.black.withOpacity(0.2),
-                              Colors.black.withOpacity(0.5),
-                              colorScheme.background,
+                              Colors.black.withValues(alpha: 0.2),
+                              Colors.black.withValues(alpha: 0.5),
+                              colorScheme.surface,
                             ],
                             stops: const [0.0, 0.4, 0.9],
                           ),
@@ -109,7 +106,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                             borderRadius: BorderRadius.circular(4),
                             color: _currentIndex == entry.key 
                                 ? colorScheme.primary 
-                                : colorScheme.onBackground.withOpacity(0.2),
+                                : colorScheme.onSurface.withValues(alpha: 0.2),
                           ),
                         ),
                       );
@@ -132,7 +129,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen> {
                   Text(
                     _slides[_currentIndex]['subtitle']!,
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                       fontSize: 18,
                       height: 1.4,
                     ),

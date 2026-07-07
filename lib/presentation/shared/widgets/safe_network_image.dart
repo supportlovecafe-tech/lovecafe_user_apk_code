@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
@@ -26,22 +27,47 @@ class SafeNetworkImage extends StatelessWidget {
     print('SafeNetworkImage loading: $imageUrl');
     if (imageUrl.isEmpty) return _fallbackContainer();
 
-    final image = CachedNetworkImage(
-      imageUrl: imageUrl,
-      width: width,
-      height: height,
-      fit: fit,
-      placeholder: (context, url) => _shimmerLoader(),
-      errorWidget: (context, url, error) => _fallbackContainer(),
-    );
+    Widget imageWidget;
+
+    if (kIsWeb) {
+      imageWidget = Image.network(
+        imageUrl,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (context, error, stackTrace) => _fallbackContainer(),
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return _shimmerLoader();
+        },
+      );
+    } else {
+      imageWidget = CachedNetworkImage(
+        imageUrl: imageUrl,
+        width: width,
+        height: height,
+        fit: fit,
+        placeholder: (context, url) => _shimmerLoader(),
+        errorWidget: (context, url, error) {
+          // Robust fallback to standard Image.network on mobile in case of SSL/Caching failures
+          return Image.network(
+            imageUrl,
+            width: width,
+            height: height,
+            fit: fit,
+            errorBuilder: (context, err, stack) => _fallbackContainer(),
+          );
+        },
+      );
+    }
 
     if (borderRadius != null) {
       return ClipRRect(
         borderRadius: borderRadius!,
-        child: image,
+        child: imageWidget,
       );
     }
-    return image;
+    return imageWidget;
   }
 
   Widget _shimmerLoader() {

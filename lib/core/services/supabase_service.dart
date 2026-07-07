@@ -38,7 +38,7 @@ class SupabaseService {
       final response = await _client
           .from('food_items')
           .select('*')
-          .eq('cinema_id', cinemaId)
+          .or('cinema_id.eq.$cinemaId,cinema_id.is.null')
           .eq('is_available', true);
       return (response as List).map((data) => FoodItem.fromMap(data)).toList();
     }

@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart';
 
 class AuthService {
   SupabaseClient get client => Supabase.instance.client;
@@ -8,132 +10,117 @@ class AuthService {
 
   Stream<AuthState> get authStateChanges => client.auth.onAuthStateChange;
 
-  Future<Map<String, dynamic>> signUpWithPhone({
-    required String phone,
+  Future<AuthResponse> signUpWithEmail({
+    required String email,
     required String password,
     required Map<String, dynamic> data,
   }) async {
-    try {
-      // 1. Try real signup first (in case it's enabled in future)
-      final response = await client.auth.signUp(
-        phone: phone,
-        password: password,
-        data: data,
-      );
-      return {'user': response.user, 'session': response.session};
-    } catch (e) {
-      // 2. Demo Bypass: Store in customer_profiles directly
-      final existing = await client
-          .from('customer_profiles')
-          .select()
-          .eq('phone', phone)
-          .maybeSingle();
-
-      if (existing != null) {
-        throw Exception('Phone number already registered');
-      }
-
-      final profile = {
-        'phone': phone,
-        'password': password,
-        'first_name': data['first_name'],
-        'last_name': data['last_name'],
-        'email': data['email'],
-      };
-
-      final newProfile = await client
-          .from('customer_profiles')
-          .insert(profile)
-          .select()
-          .single();
-      
-      return {'demo_user': newProfile};
-    }
-  }
-
-  Future<Map<String, dynamic>> signInWithPhone({
-    required String phone,
-    required String password,
-  }) async {
-    try {
-      // 1. Try real login first
-      final response = await client.auth.signInWithPassword(
-        phone: phone,
-        password: password,
-      );
-      return {'user': response.user, 'session': response.session};
-    } catch (e) {
-      // 2. Demo Bypass: Check customer_profiles
-      final profile = await client
-          .from('customer_profiles')
-          .select()
-          .eq('phone', phone)
-          .eq('password', password)
-          .maybeSingle();
-
-      if (profile == null) {
-        throw Exception('Invalid phone number or password');
-      }
-
-      return {'demo_user': profile};
-    }
-  }
-
-  Future<void> sendPhoneOtp(String phone) async {
-    await client.auth.signInWithOtp(phone: phone);
-  }
-
-  Future<AuthResponse> verifyPhoneOtp({
-    required String phone,
-    required String token,
-  }) async {
-    return await client.auth.verifyOTP(
-      phone: phone,
-      token: token,
-      type: OtpType.sms,
+    return await client.auth.signUp(
+      email: email,
+      password: password,
+      data: data,
     );
   }
 
-  Future<void> sendEmailOtp(String email) async {
-    await client.auth.signInWithOtp(email: email);
+  Future<AuthResponse> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    return await client.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
   }
 
-  Future<AuthResponse> verifyEmailOtp({
+  Future<void> sendPasswordResetEmail(String email) async {
+    await client.auth.resetPasswordForEmail(email);
+  }
+
+  Future<void> resetPasswordWithOtp({
     required String email,
-    required String token,
+    required String otp,
+    required String newPassword,
   }) async {
-    return await client.auth.verifyOTP(
+    final AuthResponse response = await client.auth.verifyOTP(
       email: email,
-      token: token,
-      type: OtpType.email,
+      token: otp,
+      type: OtpType.recovery,
+    );
+
+    if (response.session == null) {
+      throw Exception('Invalid OTP or session expired.');
+    }
+
+    await client.auth.updateUser(
+      UserAttributes(password: newPassword),
     );
   }
 
   Future<void> updateProfile(Map<String, dynamic> data) async {
     final user = currentUser;
     if (user == null) return;
-    await client.from('profiles').update(data).eq('id', user.id);
-  }
-
-  Future<void> updateCustomerProfile(String profileId, Map<String, dynamic> data) async {
-    await client.from('customer_profiles').update(data).eq('id', profileId);
+    
+    // We update customer_profiles using the current auth user ID
+    await client.from('customer_profiles').update(data).eq('id', user.id);
   }
 
   Future<void> signOut() async {
-    try {
-      // Real Supabase auth users: properly invalidates the session token
-      await client.auth.signOut();
-    } catch (_) {
-      // Demo bypass users have no real Supabase Auth session — swallow the error.
-      // The caller (AuthNotifier.logout) handles all state clearing.
-    }
+    await client.auth.signOut();
   }
 
   Future<bool> signInWithGoogle() async {
-    return await client.auth.signInWithOAuth(OAuthProvider.google);
+    // TODO: Replace with your actual Web Client ID from Google Cloud Console
+      const webClientId = '997876784016-gsksgjan5jmu0d6g2na1t3h15s0r2r4f.apps.googleusercontent.com';
+    // TODO: Replace with your actual iOS Client ID from Google Cloud Console (if supporting iOS)
+    const iosClientId = '997876784016-7qpmk4bl6oatmq8ed8tud0fl4ds07tkr.apps.googleusercontent.com';
+
+    try {
+      final GoogleSignIn googleSignIn = GoogleSignIn(
+        serverClientId: webClientId,
+        clientId: kIsWeb ? webClientId : iosClientId,
+      );
+      
+      // Force account picker to show by signing out of any cached sessions first
+      await googleSignIn.signOut();
+      
+      final googleUser = await googleSignIn.signIn();
+      if (googleUser == null) {
+        return false; // User canceled the sign-in
+      }
+      
+      final googleAuth = await googleUser.authentication;
+      final accessToken = googleAuth.accessToken;
+      final idToken = googleAuth.idToken;
+
+      if (accessToken == null || idToken == null) {
+        throw 'Missing Google Auth Token';
+      }
+
+      final response = await client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: accessToken,
+      );
+      
+      return response.session != null;
+    } catch (e) {
+      print('Google sign-in error: $e');
+      return false;
+    }
   }
 
   bool get isAuthenticated => currentUser != null;
+
+  // --- Phone OTP Registration & Login Flow ---
+
+  Future<void> sendOtp(String phone) async {
+    final response = await client.functions.invoke('dummy', headers: {}); // Just to get the structure if we used edge functions, but we are using our custom Next.js backend
+    // Since we are using Next.js backend, we use standard http
+    // Let's use standard http package or simply assume the caller handles http for sendOtp like in Checkout
+    // Wait, it's better to implement it here for reusability, but we need the backend URL.
+    // Instead of adding http dependency to auth_service, let the caller (AuthNotifier or Screen) handle it
+    // since the app already uses `http` in `checkout_screen.dart` with `BackendConfig.backendApiUrl`.
+  }
 }
 
 final authServiceProvider = Provider<AuthService>((ref) {

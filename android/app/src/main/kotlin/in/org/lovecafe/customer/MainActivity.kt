@@ -1,4 +1,4 @@
-package com.example.cinema_eats_customer
+package `in`.org.lovecafe.customer
 
 import io.flutter.embedding.android.FlutterActivity
 

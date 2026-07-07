@@ -2,7 +2,7 @@ import '../../../core/models/food_item.dart';
 
 enum OrderStatus { PENDING, PREPARING, READY, DELIVERED, CANCELLED }
 enum PaymentStatus { PENDING, SUCCESS, FAILED }
-enum PaymentMethod { DEMO_UPI, DEMO_CARD, DEMO_WALLET, PAY_ON_DELIVERY }
+enum PaymentMethod { DEMO_UPI, DEMO_CARD, DEMO_WALLET, PAY_ON_DELIVERY, PAY_LATER }
 
 class OrderModel {
   final String id;

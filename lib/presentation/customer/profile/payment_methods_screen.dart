@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_text_styles.dart';
 
 class PaymentMethodsScreen extends ConsumerWidget {
   const PaymentMethodsScreen({super.key});
@@ -13,7 +11,7 @@ class PaymentMethodsScreen extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -65,7 +63,7 @@ class PaymentMethodsScreen extends ConsumerWidget {
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
           fontWeight: FontWeight.w900,
           letterSpacing: 2,
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
         ),
       ),
     );
@@ -86,7 +84,7 @@ class PaymentMethodsScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.3),
+            color: color.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -111,7 +109,7 @@ class PaymentMethodsScreen extends ConsumerWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('CARD HOLDER', style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                  Text('CARD HOLDER', style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
                   const SizedBox(height: 4),
                   Text(holder.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
                 ],
@@ -119,7 +117,7 @@ class PaymentMethodsScreen extends ConsumerWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('EXPIRES', style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                  Text('EXPIRES', style: TextStyle(color: Colors.white.withValues(alpha: 0.4), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1)),
                   const SizedBox(height: 4),
                   Text(expiry, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
                 ],
@@ -138,7 +136,7 @@ class PaymentMethodsScreen extends ConsumerWidget {
       height: 100,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.1), width: 2),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1), width: 2),
       ),
       child: Center(
         child: Column(
@@ -161,13 +159,13 @@ class PaymentMethodsScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isSelected ? colorScheme.primary : colorScheme.outline.withOpacity(0.06)),
+        border: Border.all(color: isSelected ? colorScheme.primary : colorScheme.outline.withValues(alpha: 0.06)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: colorScheme.primary.withOpacity(0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: colorScheme.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
             child: Icon(Icons.account_balance_rounded, color: colorScheme.primary, size: 20),
           ),
           const SizedBox(width: 16),
@@ -176,7 +174,7 @@ class PaymentMethodsScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(id, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                Text(label, style: TextStyle(color: colorScheme.onSurface.withOpacity(0.4), fontSize: 12)),
+                Text(label, style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.4), fontSize: 12)),
               ],
             ),
           ),
@@ -194,13 +192,13 @@ class PaymentMethodsScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.06)),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.06)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(color: colorScheme.secondary.withOpacity(0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(color: colorScheme.secondary.withValues(alpha: 0.1), shape: BoxShape.circle),
             child: Icon(Icons.account_balance_wallet_rounded, color: colorScheme.secondary, size: 20),
           ),
           const SizedBox(width: 16),
@@ -213,7 +211,7 @@ class PaymentMethodsScreen extends ConsumerWidget {
               ],
             ),
           ),
-          Icon(Icons.chevron_right_rounded, color: colorScheme.onSurface.withOpacity(0.2)),
+          Icon(Icons.chevron_right_rounded, color: colorScheme.onSurface.withValues(alpha: 0.2)),
         ],
       ),
     );

@@ -7,7 +7,8 @@ import '../../presentation/customer/onboarding/welcome_screen.dart';
 // Auth
 import '../../presentation/customer/auth/login_screen.dart';
 import '../../presentation/customer/auth/signup_screen.dart';
-import '../../presentation/customer/auth/otp_verification_screen.dart';
+
+import '../../presentation/customer/auth/forgot_password_screen.dart';
 
 // Core Experience
 import '../../presentation/customer/home/home_screen.dart';
@@ -42,12 +43,10 @@ final appRouter = GoRouter(
       path: '/signup',
       builder: (context, state) => const SignupScreen(),
     ),
+
     GoRoute(
-      path: '/otp-verification',
-      builder: (context, state) {
-        final data = state.extra as Map<String, dynamic>;
-        return OtpVerificationScreen(signupData: data);
-      },
+      path: '/forgot-password',
+      builder: (context, state) => const ForgotPasswordScreen(),
     ),
     GoRoute(
       path: '/home',

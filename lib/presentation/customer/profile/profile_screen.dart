@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_text_styles.dart';
+import '../../../core/constants/app_gradients.dart';
+import '../../../core/constants/app_shadows.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/theme_provider.dart';
 import '../../../core/providers/loyalty_provider.dart';
@@ -38,7 +41,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       await ref.read(authProvider.notifier).updateProfile(
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
-        email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
       );
       setState(() => _isEditing = false);
       if (mounted) {
@@ -65,8 +67,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final themeMode = ref.watch(themeProvider);
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: AppColors.bg,
+      extendBody: true,
       body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
         slivers: [
           _buildAppBar(context, theme, colorScheme),
           SliverToBoxAdapter(
@@ -89,19 +93,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       subtitle: 'View your cinematic feasts history',
                       onTap: () => context.push('/orders'),
                     ),
-                    _buildMenuTile(
-                      context,
-                      icon: Icons.brightness_4_rounded,
-                      title: 'Dark Mode',
-                      subtitle: 'Toggle theme for a cinematic experience',
-                      trailing: Switch(
-                        value: themeMode == ThemeMode.dark,
-                        onChanged: (value) {
-                          ref.read(themeProvider.notifier).toggleTheme();
-                        },
-                        activeColor: colorScheme.primary,
-                      ),
-                    ),
+
                     const SizedBox(height: 32),
                     _buildSectionHeader(context, 'SUPPORT & SETTINGS'),
                     _buildMenuTile(
@@ -130,9 +122,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: AppColors.surfaceElevated.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+        border: Border.all(color: AppColors.glassBorder),
       ),
       child: Column(
         children: [
@@ -140,22 +132,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           const SizedBox(height: 20),
           _buildFormInput('LAST NAME', _lastNameController, Icons.person_outline),
           const SizedBox(height: 20),
-          _buildFormInput('EMAIL', _emailController, Icons.alternate_email),
+          _buildFormInput('EMAIL', _emailController, Icons.alternate_email, enabled: false),
           const SizedBox(height: 20),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('PHONE NUMBER', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w900, color: colorScheme.primary.withOpacity(0.5))),
+              Text('PHONE NUMBER', style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w900, color: colorScheme.primary.withValues(alpha: 0.5))),
               const SizedBox(height: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                 width: double.infinity,
                 decoration: BoxDecoration(
-                  color: colorScheme.onSurface.withOpacity(0.01),
+                  color: colorScheme.onSurface.withValues(alpha: 0.01),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: colorScheme.outline.withOpacity(0.05)),
+                  border: Border.all(color: colorScheme.outline.withValues(alpha: 0.05)),
                 ),
-                child: Text(auth.phone ?? 'N/A', style: TextStyle(color: colorScheme.onSurface.withOpacity(0.4), fontWeight: FontWeight.bold)),
+                child: Text(auth.phone ?? 'N/A', style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.4), fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -171,14 +163,14 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           const SizedBox(height: 12),
           TextButton(
             onPressed: () => setState(() => _isEditing = false),
-            child: Text('CANCEL', style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5))),
+            child: Text('CANCEL', style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5))),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFormInput(String label, TextEditingController controller, IconData icon) {
+  Widget _buildFormInput(String label, TextEditingController controller, IconData icon, {bool enabled = true}) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     return Column(
@@ -188,10 +180,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         const SizedBox(height: 8),
         TextField(
           controller: controller,
+          enabled: enabled,
           decoration: InputDecoration(
             prefixIcon: Icon(icon, size: 20),
             filled: true,
-            fillColor: colorScheme.onSurface.withOpacity(0.03),
+            fillColor: colorScheme.onSurface.withValues(alpha: 0.03),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
           ),
         ),
@@ -202,9 +195,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget _buildAppBar(BuildContext context, ThemeData theme, ColorScheme colorScheme) {
     return SliverAppBar(
       pinned: true,
-      backgroundColor: colorScheme.background.withOpacity(0.8),
-      title: Text('Account', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
-      centerTitle: true,
+      backgroundColor: AppColors.bg,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
+      title: Text('My Profile',
+          style: AppTextStyles.headingSmall),
+      centerTitle: false,
     );
   }
 
@@ -214,15 +210,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         Stack(
           children: [
             Container(
-              padding: const EdgeInsets.all(6),
+              padding: const EdgeInsets.all(3),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: LinearGradient(colors: [colorScheme.primary, colorScheme.primary.withOpacity(0.3)]),
+                gradient: AppGradients.primaryButton,
               ),
               child: CircleAvatar(
-                radius: 60,
-                backgroundColor: colorScheme.surface,
-                child: Icon(Icons.person_rounded, size: 60, color: colorScheme.onSurface.withOpacity(0.3)),
+                radius: 58,
+                backgroundColor: AppColors.surfaceElevated,
+                child: Icon(Icons.person_rounded, size: 58,
+                    color: AppColors.textDisabled),
               ),
             ),
             Positioned(
@@ -231,43 +228,61 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               child: GestureDetector(
                 onTap: () => setState(() => _isEditing = !_isEditing),
                 child: Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(9),
                   decoration: BoxDecoration(
-                    color: _isEditing ? Colors.green : colorScheme.primary,
+                    color: _isEditing ? AppColors.success : AppColors.primary,
                     shape: BoxShape.circle,
-                    border: Border.all(color: colorScheme.surface, width: 3),
+                    border: Border.all(color: AppColors.bg, width: 3),
+                    boxShadow: AppShadows.iconGlow,
                   ),
-                  child: Icon(_isEditing ? Icons.check_rounded : Icons.edit_rounded, size: 16, color: Colors.white),
+                  child: Icon(
+                      _isEditing ? Icons.check_rounded : Icons.edit_rounded,
+                      size: 16,
+                      color: Colors.white),
                 ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 24),
-        Text(auth.userName ?? 'User Name',
-            style: theme.textTheme.headlineLarge?.copyWith(fontWeight: FontWeight.w900, letterSpacing: -1)),
-        const SizedBox(height: 8),
+        const SizedBox(height: 20),
+        Text(auth.userName ?? 'Guest User',
+            style: AppTextStyles.headingLarge),
+        const SizedBox(height: 6),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.phone_android_rounded, size: 14, color: colorScheme.onSurface.withOpacity(0.4)),
+            Icon(Icons.phone_android_rounded,
+                size: 12, color: AppColors.textDisabled),
             const SizedBox(width: 4),
-            Text(auth.phone ?? '', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurface.withOpacity(0.4), fontWeight: FontWeight.bold)),
+            Text(auth.phone ?? '',
+                style: AppTextStyles.labelSmall),
             if (auth.email != null && auth.email!.isNotEmpty) ...[
-              const SizedBox(width: 12),
-              Container(width: 4, height: 4, decoration: BoxDecoration(shape: BoxShape.circle, color: colorScheme.onSurface.withOpacity(0.2))),
-              const SizedBox(width: 12),
-              Icon(Icons.alternate_email_rounded, size: 14, color: colorScheme.onSurface.withOpacity(0.4)),
-              const SizedBox(width: 4),
-              Text(auth.email!, style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurface.withOpacity(0.4), fontWeight: FontWeight.bold)),
+              const SizedBox(width: 10),
+              Container(
+                  width: 3,
+                  height: 3,
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.textDisabled)),
+              const SizedBox(width: 10),
+              Text(auth.email!,
+                  style: AppTextStyles.labelSmall),
             ],
           ],
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          decoration: BoxDecoration(color: colorScheme.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-          child: Text('GOLD CINEPHILE', style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.primary, fontWeight: FontWeight.w900, letterSpacing: 2)),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+                color: AppColors.primary.withValues(alpha: 0.3)),
+          ),
+          child: Text('GOLD CINEPHILE',
+              style: AppTextStyles.sectionTitle
+                  .copyWith(color: AppColors.primary, letterSpacing: 2)),
         ),
       ],
     );
@@ -294,31 +309,34 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildStatCard(BuildContext context, String label, String value, IconData icon, {bool isExpanded = true}) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     Widget card = Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+        color: AppColors.surfaceElevated.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.glassBorder),
+        boxShadow: AppShadows.purpleGlow,
       ),
       child: Column(children: [
-        Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: colorScheme.primary.withOpacity(0.1), shape: BoxShape.circle), child: Icon(icon, color: colorScheme.primary, size: 20)),
-        const SizedBox(height: 16),
-        Text(value, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
-        const SizedBox(height: 4),
-        Text(label, style: theme.textTheme.labelSmall?.copyWith(color: colorScheme.onSurface.withOpacity(0.4), fontWeight: FontWeight.w900, letterSpacing: 1)),
+        Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle),
+            child: Icon(icon, color: AppColors.primary, size: 20)),
+        const SizedBox(height: 12),
+        Text(value, style: AppTextStyles.headingSmall),
+        const SizedBox(height: 3),
+        Text(label, style: AppTextStyles.sectionTitle),
       ]),
     );
-
     return isExpanded ? Expanded(child: card) : card;
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    return Align(alignment: Alignment.centerLeft, child: Padding(padding: const EdgeInsets.only(left: 4, bottom: 20), child: Text(title, style: theme.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.w900, letterSpacing: 2.5, color: colorScheme.onSurface.withOpacity(0.3)))));
+    return Align(alignment: Alignment.centerLeft, child: Padding(padding: const EdgeInsets.only(left: 4, bottom: 20), child: Text(title, style: AppTextStyles.labelSmall.copyWith(fontWeight: FontWeight.w900, letterSpacing: 2.5, color: AppColors.textDisabled))));
   }
 
   Widget _buildMenuTile(BuildContext context, {required IconData icon, required String title, required String subtitle, VoidCallback? onTap, Widget? trailing}) {
@@ -326,13 +344,17 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final colorScheme = theme.colorScheme;
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(color: colorScheme.surface, borderRadius: BorderRadius.circular(24), border: Border.all(color: colorScheme.outline.withOpacity(0.1))),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated.withValues(alpha: 0.5), 
+        borderRadius: BorderRadius.circular(24), 
+        border: Border.all(color: AppColors.glassBorder),
+      ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        leading: Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: colorScheme.primary.withOpacity(0.05), borderRadius: BorderRadius.circular(16)), child: Icon(icon, color: colorScheme.primary, size: 24)),
-        title: Text(title, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-        subtitle: Padding(padding: const EdgeInsets.only(top: 4), child: Text(subtitle, style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurface.withOpacity(0.4)))),
-        trailing: trailing ?? Icon(Icons.chevron_right_rounded, color: colorScheme.onSurface.withOpacity(0.2)),
+        leading: Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)), child: Icon(icon, color: AppColors.primary, size: 24)),
+        title: Text(title, style: AppTextStyles.titleMedium),
+        subtitle: Padding(padding: const EdgeInsets.only(top: 4), child: Text(subtitle, style: AppTextStyles.bodySmall.copyWith(color: AppColors.textDisabled))),
+        trailing: trailing ?? Icon(Icons.chevron_right_rounded, color: AppColors.textDisabled),
         onTap: onTap,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       ),
@@ -342,6 +364,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Widget _buildLogoutButton(BuildContext context, ThemeData theme, ColorScheme colorScheme, WidgetRef ref) {
     return SizedBox(
       width: double.infinity,
+      height: 56,
       child: OutlinedButton.icon(
         onPressed: () async {
           try {
@@ -349,19 +372,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           } catch (e) {
             debugPrint('Logout error (non-fatal): $e');
           } finally {
-            // Always navigate to welcome, even if logout partially failed
             if (context.mounted) {
               context.go('/welcome');
             }
           }
         },
-        icon: const Icon(Icons.logout_rounded, size: 20),
-        label: Text('SIGN OUT', style: theme.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w900, letterSpacing: 2)),
+        icon: const Icon(Icons.logout_rounded, size: 18),
+        label: Text('Sign Out',
+            style: AppTextStyles.buttonMedium
+                .copyWith(color: AppColors.error, letterSpacing: 1)),
         style: OutlinedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          foregroundColor: colorScheme.error,
-          side: BorderSide(color: colorScheme.error.withOpacity(0.2)),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          foregroundColor: AppColors.error,
+          side: BorderSide(color: AppColors.error.withValues(alpha: 0.25)),
+          shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16)),
         ),
       ),
     );
@@ -375,10 +399,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         padding: const EdgeInsets.fromLTRB(24, 12, 24, 40),
-        decoration: BoxDecoration(color: colorScheme.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(40))),
+        decoration: BoxDecoration(color: AppColors.surfaceElevated.withValues(alpha: 0.95), borderRadius: const BorderRadius.vertical(top: Radius.circular(40))),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(width: 60, height: 6, margin: const EdgeInsets.only(bottom: 32), decoration: BoxDecoration(color: colorScheme.onSurface.withOpacity(0.1), borderRadius: BorderRadius.circular(3))),
-          Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: colorScheme.primary.withOpacity(0.1), shape: BoxShape.circle), child: Icon(Icons.auto_awesome_rounded, color: colorScheme.primary, size: 40)),
+          Container(width: 60, height: 6, margin: const EdgeInsets.only(bottom: 32), decoration: BoxDecoration(color: colorScheme.onSurface.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(3))),
+          Container(padding: const EdgeInsets.all(20), decoration: BoxDecoration(color: colorScheme.primary.withValues(alpha: 0.1), shape: BoxShape.circle), child: Icon(Icons.auto_awesome_rounded, color: colorScheme.primary, size: 40)),
           const SizedBox(height: 24),
           Text(title, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
           const SizedBox(height: 40),

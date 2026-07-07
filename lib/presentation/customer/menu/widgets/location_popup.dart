@@ -43,7 +43,7 @@ class _LocationSelectionPopupState
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: Colors.black.withValues(alpha: 0.2),
             blurRadius: 40,
             offset: const Offset(0, -10),
           ),
@@ -61,7 +61,7 @@ class _LocationSelectionPopupState
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: colorScheme.outline.withOpacity(0.2),
+                      color: colorScheme.outline.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -126,9 +126,9 @@ class _LocationSelectionPopupState
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     decoration: BoxDecoration(
-                      color: colorScheme.onSurface.withOpacity(0.05),
+                      color: colorScheme.onSurface.withValues(alpha: 0.05),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+                      border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
                     ),
                     child: TextField(
                       controller: _seatController,
@@ -136,7 +136,7 @@ class _LocationSelectionPopupState
                       decoration: InputDecoration(
                         hintText: 'e.g. G12',
                         hintStyle: theme.textTheme.bodyLarge?.copyWith(
-                          color: colorScheme.onSurface.withOpacity(0.3),
+                          color: colorScheme.onSurface.withValues(alpha: 0.3),
                         ),
                         border: InputBorder.none,
                         suffixIcon: Icon(Icons.chair_alt_rounded,
@@ -148,7 +148,7 @@ class _LocationSelectionPopupState
                   Text(
                     'Tip: Use row+seat like G12. We deliver directly to you.',
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurface.withOpacity(0.5),
+                      color: colorScheme.onSurface.withValues(alpha: 0.5),
                     ),
                   ),
                 ],
@@ -163,7 +163,7 @@ class _LocationSelectionPopupState
               decoration: BoxDecoration(
                 boxShadow: [
                   BoxShadow(
-                    color: colorScheme.primary.withOpacity(0.3),
+                    color: colorScheme.primary.withValues(alpha: 0.3),
                     blurRadius: 24,
                     offset: const Offset(0, 12),
                   ),
@@ -191,7 +191,7 @@ class _LocationSelectionPopupState
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.primary,
                   foregroundColor: colorScheme.onPrimary,
-                  disabledBackgroundColor: colorScheme.onSurface.withOpacity(0.12),
+                  disabledBackgroundColor: colorScheme.onSurface.withValues(alpha: 0.12),
                   minimumSize: const Size.fromHeight(64),
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(20)),
@@ -228,19 +228,19 @@ class _LocationSelectionPopupState
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: colorScheme.surfaceVariant.withOpacity(0.3),
+        color: colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [
-          Icon(Icons.info_outline_rounded, color: colorScheme.onSurface.withOpacity(0.2), size: 32),
+          Icon(Icons.info_outline_rounded, color: colorScheme.onSurface.withValues(alpha: 0.2), size: 32),
           const SizedBox(height: 12),
           Text(
             label,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurface.withOpacity(0.5),
+              color: colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -271,13 +271,13 @@ class _LocationSelectionPopupState
           ),
           boxShadow: isSelected ? [
             BoxShadow(
-              color: colorScheme.primary.withOpacity(0.3),
+              color: colorScheme.primary.withValues(alpha: 0.3),
               blurRadius: 20,
               offset: const Offset(0, 10),
             )
           ] : [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 15,
               offset: const Offset(0, 5),
             )
@@ -300,8 +300,8 @@ class _LocationSelectionPopupState
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withOpacity(0.1),
-                      Colors.black.withOpacity(0.8),
+                      Colors.black.withValues(alpha: 0.1),
+                      Colors.black.withValues(alpha: 0.8),
                     ],
                   ),
                 ),
@@ -331,9 +331,9 @@ class _LocationSelectionPopupState
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  Icon(Icons.location_on_rounded, size: 14, color: Colors.white.withOpacity(0.7)),
+                                  Icon(Icons.location_on_rounded, size: 14, color: Colors.white.withValues(alpha: 0.7)),
                                   const SizedBox(width: 4),
-                                  Expanded(child: Text(hall.location, style: theme.textTheme.bodySmall?.copyWith(color: Colors.white.withOpacity(0.8)))),
+                                  Expanded(child: Text(hall.location, style: theme.textTheme.bodySmall?.copyWith(color: Colors.white.withValues(alpha: 0.8)))),
                                 ],
                               ),
                             ],
@@ -352,7 +352,7 @@ class _LocationSelectionPopupState
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
+                              color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
@@ -392,10 +392,10 @@ class _LocationSelectionPopupState
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         decoration: BoxDecoration(
-          color: isSelected ? colorScheme.primary.withOpacity(0.1) : colorScheme.onSurface.withOpacity(0.03),
+          color: isSelected ? colorScheme.primary.withValues(alpha: 0.1) : colorScheme.onSurface.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? colorScheme.primary : colorScheme.outline.withOpacity(0.1),
+            color: isSelected ? colorScheme.primary : colorScheme.outline.withValues(alpha: 0.1),
             width: 2,
           ),
         ),
@@ -405,7 +405,7 @@ class _LocationSelectionPopupState
           children: [
             Text(screen.floor.toUpperCase(),
                 style: theme.textTheme.labelSmall?.copyWith(
-                    color: colorScheme.onSurface.withOpacity(0.4),
+                    color: colorScheme.onSurface.withValues(alpha: 0.4),
                     fontWeight: FontWeight.bold,
                     letterSpacing: 1)),
             const SizedBox(height: 8),
@@ -418,13 +418,13 @@ class _LocationSelectionPopupState
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: (isSelected ? colorScheme.primary : colorScheme.onSurface).withOpacity(0.1),
+                color: (isSelected ? colorScheme.primary : colorScheme.onSurface).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
                 screen.tag,
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: isSelected ? colorScheme.primary : colorScheme.onSurface.withOpacity(0.6),
+                  color: isSelected ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.6),
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -486,9 +486,9 @@ class _LocationSelectionPopupState
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: colorScheme.onSurface.withOpacity(0.03),
+        color: colorScheme.onSurface.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -497,7 +497,7 @@ class _LocationSelectionPopupState
               style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
           const SizedBox(height: 4),
           Text(subtitle,
-              style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface.withOpacity(0.5))),
+              style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface.withValues(alpha: 0.5))),
           const SizedBox(height: 20),
           Wrap(
             spacing: 8,
@@ -517,7 +517,7 @@ class _LocationSelectionPopupState
                   child: LinearProgressIndicator(
                     value: (step + 1) / 3,
                     minHeight: 8,
-                    backgroundColor: colorScheme.onSurface.withOpacity(0.05),
+                    backgroundColor: colorScheme.onSurface.withValues(alpha: 0.05),
                     valueColor: AlwaysStoppedAnimation(colorScheme.primary),
                   ),
                 ),
@@ -545,9 +545,9 @@ class _LocationSelectionPopupState
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: colorScheme.onSurface.withOpacity(0.03),
+        color: colorScheme.onSurface.withValues(alpha: 0.03),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+        border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -605,14 +605,14 @@ class _LocationSelectionPopupState
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: active ? colorScheme.primary.withOpacity(0.1) : colorScheme.onSurface.withOpacity(0.05),
+        color: active ? colorScheme.primary.withValues(alpha: 0.1) : colorScheme.onSurface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: active ? colorScheme.primary.withOpacity(0.2) : colorScheme.outline.withOpacity(0.05)),
+        border: Border.all(color: active ? colorScheme.primary.withValues(alpha: 0.2) : colorScheme.outline.withValues(alpha: 0.05)),
       ),
       child: Text(
         label,
         style: Theme.of(context).textTheme.labelMedium?.copyWith(
-          color: active ? colorScheme.primary : colorScheme.onSurface.withOpacity(0.4),
+          color: active ? colorScheme.primary : colorScheme.onSurface.withValues(alpha: 0.4),
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -627,12 +627,12 @@ class _LocationSelectionPopupState
       decoration: BoxDecoration(
         color: selected
             ? colorScheme.primary
-            : colorScheme.onSurface.withOpacity(0.05),
+            : colorScheme.onSurface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
             color: selected
                 ? colorScheme.primary
-                : colorScheme.outline.withOpacity(0.1)),
+                : colorScheme.outline.withValues(alpha: 0.1)),
       ),
       child: Text(
         label,

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/constants/app_gradients.dart';
+import '../../../core/constants/app_shadows.dart';
 import '../../../core/models/order_model.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/cart_provider.dart';
@@ -11,6 +13,9 @@ import '../../../core/providers/seat_selection_provider.dart';
 import '../../../core/providers/loyalty_provider.dart';
 import '../../shared/widgets/primary_button.dart';
 import 'widgets/location_popup.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../../../core/services/backend_config.dart';
 
 class CheckoutScreen extends ConsumerStatefulWidget {
   const CheckoutScreen({super.key});
@@ -23,11 +28,27 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   PaymentMethod _selectedMethod = PaymentMethod.DEMO_UPI;
   bool _useLoyaltyPoints = false;
   bool _isLoading = false;
+  final _phoneController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = ref.read(authProvider);
+      if (auth.phone != null && auth.phone!.isNotEmpty) {
+        _phoneController.text = auth.phone!;
+      } else if (auth.email != null && !auth.email!.contains('@')) {
+        // Handle proxy email that is actually a phone number
+        _phoneController.text = auth.email!.replaceAll('@cinemaeats.local', '');
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final cartState = ref.watch(cartProvider);
     final cartItems = cartState.items;
     final breakdown = cartState.breakdown;
@@ -42,7 +63,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final baseTotal = breakdown.total;
     
     // Loyalty Logic
-    final maxRedeemablePoints = loyalty.availablePoints;
     final maxRedeemableValue = loyalty.rupeeValue;
     
     // We cap redemption at 50% of order value OR full point value, whichever is smaller
@@ -52,7 +72,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     
     final grandTotal = baseTotal - actualRedeemValue;
 
-    final allowedMethods = seatSelection.allowedPaymentMethods ?? ['DEMO_UPI', 'DEMO_CARD', 'PAY_ON_DELIVERY'];
+    final allowedMethods = seatSelection.allowedPaymentMethods ?? ['DEMO_UPI', 'DEMO_CARD', 'PAY_ON_DELIVERY', 'PAY_LATER'];
     if (!allowedMethods.contains(_selectedMethod.name)) {
       if (allowedMethods.isNotEmpty) {
         _selectedMethod = PaymentMethod.values.firstWhere(
@@ -63,19 +83,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     }
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.bg,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: colorScheme.surface,
+              color: AppColors.surface,
               shape: BoxShape.circle,
-              border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
             ),
-            child: Icon(Icons.arrow_back_ios_new_rounded, color: colorScheme.primary, size: 16),
+            child: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.textPrimary, size: 16),
           ),
           onPressed: () {
             if (Navigator.canPop(context)) {
@@ -85,7 +106,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             }
           },
         ),
-        title: Text('Checkout', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
+        title: Text('Checkout', style: AppTextStyles.headingSmall),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -102,7 +123,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             if (cartState.isValidating)
                Padding(
                  padding: EdgeInsets.symmetric(vertical: 8),
-                 child: Row(children: [SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2)), SizedBox(width: 8), Text('Validating prices...', style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.6)))]),
+                 child: Row(children: [SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2)), SizedBox(width: 8), Text('Validating prices...', style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.6)))]),
                ),
             const SizedBox(height: 32),
 
@@ -116,7 +137,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
             _buildPaymentMethods(seatSelection.allowedPaymentMethods),
             const SizedBox(height: 40),
             
-            _buildPriceBreakdown(subtotal, cgst, sgst, platformFee, actualRedeemValue, grandTotal),
+            _buildPriceBreakdown(subtotal, cgst, sgst, platformFee, breakdown.platformFeePercent, actualRedeemValue, grandTotal),
             const SizedBox(height: 120),
           ],
         ),
@@ -128,27 +149,27 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: Text(title, style: AppTextStyles.bodySmall.copyWith(letterSpacing: 1.5, fontWeight: FontWeight.w900, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4))),
+      child: Text(title, style: AppTextStyles.sectionTitle),
     );
   }
 
   Widget _buildLocationCard(SeatSelectionState selection) {
-    final colorScheme = Theme.of(context).colorScheme;
     return InkWell(
       onTap: () => _showLocationSelection(context),
       borderRadius: BorderRadius.circular(24),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor, 
+          color: AppColors.surface, 
           borderRadius: BorderRadius.circular(24), 
-          border: Border.all(color: AppColors.primary.withOpacity(0.2), width: 1.5),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+          boxShadow: AppShadows.card,
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12), 
-              decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), borderRadius: BorderRadius.circular(16)), 
+              decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(16)), 
               child: const Icon(Icons.location_on_rounded, color: AppColors.primary),
             ),
             const SizedBox(width: 16),
@@ -156,12 +177,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(selection.hallName ?? 'Cinema Hall', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                  Text('${selection.screenName} • Seat ${selection.seatLabel}', style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5), fontSize: 13)),
+                  Text(selection.hallName ?? 'Cinema Hall', style: AppTextStyles.titleMedium),
+                  const SizedBox(height: 4),
+                  Text('${selection.screenName} • Seat ${selection.seatLabel}', style: AppTextStyles.bodySmall),
                 ],
               ),
             ),
-            Icon(Icons.edit_location_alt_rounded, color: AppColors.primary.withOpacity(0.5), size: 20),
+            Icon(Icons.edit_location_alt_rounded, color: AppColors.textDisabled, size: 20),
           ],
         ),
       ),
@@ -187,7 +209,6 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   Widget _buildOrderItems(List<CartItem> cart) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Column(
       children: cart.map((item) => Padding(
         padding: const EdgeInsets.only(bottom: 16),
@@ -207,10 +228,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     child: const Text('COMBO', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
                   )
                 else
-                  Text('${item.quantity}x', style: TextStyle(fontWeight: FontWeight.w900, color: AppColors.primary, fontSize: 14)),
+                  Text('${item.quantity}x', style: AppTextStyles.titleMedium.copyWith(color: AppColors.primary)),
                 const SizedBox(width: 8),
-                Expanded(child: Text(item.foodItem.name, style: const TextStyle(fontWeight: FontWeight.w600))),
-                Text('₹${(item.foodItem.price * item.quantity).toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Expanded(child: Text(item.foodItem.name, style: AppTextStyles.titleMedium)),
+                Text('₹${(item.foodItem.price * item.quantity).toStringAsFixed(0)}', style: AppTextStyles.priceSmall),
               ],
             ),
             // Feature 1: Show item note if present
@@ -219,16 +240,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                 padding: const EdgeInsets.only(top: 6, left: 2),
                 child: Row(
                   children: [
-                    Icon(Icons.notes_rounded, size: 12, color: colorScheme.onSurface.withOpacity(0.4)),
+                    Icon(Icons.notes_rounded, size: 12, color: AppColors.textDisabled),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         item.note!,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: colorScheme.onSurface.withOpacity(0.55),
-                          fontStyle: FontStyle.italic,
-                        ),
+                        style: AppTextStyles.bodySmall.copyWith(fontStyle: FontStyle.italic),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -243,31 +260,42 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   Widget _buildLoyaltyCard(LoyaltyState loyalty, bool isSelected, Function(bool) onChanged, double discount) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: [Colors.purple.withOpacity(0.1), Colors.blue.withOpacity(0.1)]),
+        gradient: AppGradients.cinePoints,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isSelected ? Colors.purple.withOpacity(0.3) : colorScheme.outline.withOpacity(0.1)),
+        border: Border.all(color: isSelected ? Colors.transparent : Colors.white.withValues(alpha: 0.05)),
+        boxShadow: isSelected ? AppShadows.purpleGlow : [],
       ),
       child: Row(
         children: [
-          const Icon(Icons.stars_rounded, color: Colors.purple),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.auto_awesome_rounded, color: AppColors.gold, size: 20),
+          ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Use ${loyalty.availablePoints} Points', style: const TextStyle(fontWeight: FontWeight.bold)),
-                Text('Save ₹${loyalty.rupeeValue.toStringAsFixed(0)} on this order', style: TextStyle(fontSize: 12, color: colorScheme.onSurface.withOpacity(0.5))),
+                Text('Use ${loyalty.availablePoints} Points', style: AppTextStyles.titleMedium),
+                const SizedBox(height: 2),
+                Text('Save ₹${loyalty.rupeeValue.toStringAsFixed(0)} on this order', style: AppTextStyles.bodySmall.copyWith(color: Colors.white70)),
               ],
             ),
           ),
           Switch(
             value: isSelected,
             onChanged: loyalty.availablePoints > 0 ? onChanged : null,
-            activeColor: Colors.purple,
+            activeThumbColor: AppColors.gold,
+            activeTrackColor: Colors.white24,
+            inactiveThumbColor: Colors.white54,
+            inactiveTrackColor: Colors.black26,
           ),
         ],
       ),
@@ -275,7 +303,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   }
 
   Widget _buildPaymentMethods(List<String>? allowedMethods) {
-    final methods = allowedMethods ?? ['DEMO_UPI', 'DEMO_CARD', 'PAY_ON_DELIVERY'];
+    final methods = allowedMethods ?? ['DEMO_UPI', 'DEMO_CARD', 'PAY_ON_DELIVERY', 'PAY_LATER'];
     return Column(
       children: [
         if (methods.contains('DEMO_UPI')) ...[
@@ -287,7 +315,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           const SizedBox(height: 12),
         ],
         if (methods.contains('PAY_ON_DELIVERY')) ...[
-          _paymentTile(PaymentMethod.PAY_ON_DELIVERY, 'Pay on Delivery', Icons.handshake_rounded),
+          _paymentTile(PaymentMethod.PAY_ON_DELIVERY, 'Cash (Requires OTP Verification)', Icons.money_rounded),
+          const SizedBox(height: 12),
+        ],
+        if (methods.contains('PAY_LATER')) ...[
+          _paymentTile(PaymentMethod.PAY_LATER, 'Pay Later', Icons.calendar_today_rounded),
         ],
       ],
     );
@@ -295,22 +327,22 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   Widget _paymentTile(PaymentMethod method, String label, IconData icon) {
     final isSelected = _selectedMethod == method;
-    final colorScheme = Theme.of(context).colorScheme;
     return InkWell(
       onTap: () => setState(() => _selectedMethod = method),
       borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.05) : Colors.transparent,
+          color: isSelected ? AppColors.primary.withValues(alpha: 0.08) : AppColors.surfaceElevated.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? AppColors.primary : colorScheme.outline.withOpacity(0.1), width: 2),
+          border: Border.all(color: isSelected ? AppColors.primary : AppColors.glassBorder, width: 1),
+          boxShadow: isSelected ? AppShadows.pinkGlowSoft : [],
         ),
         child: Row(
           children: [
-            Icon(icon, color: isSelected ? AppColors.primary : colorScheme.onSurface.withOpacity(0.4)),
+            Icon(icon, color: isSelected ? AppColors.primary : AppColors.textDisabled),
             const SizedBox(width: 16),
-            Text(label, style: TextStyle(fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+            Text(label, style: isSelected ? AppTextStyles.titleMedium.copyWith(color: AppColors.primary) : AppTextStyles.bodyMedium),
             const Spacer(),
             if (isSelected) const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 20),
           ],
@@ -319,7 +351,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     );
   }
 
-  Widget _buildPriceBreakdown(double subtotal, double cgst, double sgst, double platformFee, double discount, double total) {
+  Widget _buildPriceBreakdown(double subtotal, double cgst, double sgst, double platformFee, double platformFeePercent, double discount, double total) {
     return Column(
       children: [
         _priceRow('Subtotal', subtotal),
@@ -328,17 +360,17 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         const SizedBox(height: 8),
         _priceRow('SGST (2.5%)', sgst),
         const SizedBox(height: 8),
-        _priceRow('Platform Fee (1%)', platformFee),
+        _priceRow('Platform Fee (${platformFeePercent.toStringAsFixed(platformFeePercent == platformFeePercent.toInt() ? 0 : 1)}%)', platformFee),
         if (discount > 0) ...[
           const SizedBox(height: 8),
           _priceRow('CinePoints Discount', -discount, isDiscount: true),
         ],
-        const Padding(padding: EdgeInsets.symmetric(vertical: 16), child: Divider()),
+        Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Divider(color: AppColors.divider)),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text('Grand Total', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
-            Text('₹${total.toStringAsFixed(2)}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, color: AppColors.primary)),
+            Text('Grand Total', style: AppTextStyles.headingMedium),
+            Text('₹${total.toStringAsFixed(2)}', style: AppTextStyles.priceLarge),
           ],
         ),
       ],
@@ -349,19 +381,24 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
-        Text('${value < 0 ? "-" : ""}₹${value.abs().toStringAsFixed(2)}', style: TextStyle(fontWeight: FontWeight.bold, color: isDiscount ? Colors.green : null)),
+        Text(label, style: AppTextStyles.bodyMedium),
+        Text('${value < 0 ? "-" : ""}₹${value.abs().toStringAsFixed(2)}', 
+          style: AppTextStyles.bodyLarge.copyWith(color: isDiscount ? AppColors.success : AppColors.textPrimary)),
       ],
     );
   }
 
   Widget _buildBottomAction(double grandTotal, int pointsToRedeem) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
-      decoration: BoxDecoration(color: colorScheme.surface, borderRadius: const BorderRadius.vertical(top: Radius.circular(32))),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceElevated.withValues(alpha: 0.95), 
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        border: Border(top: BorderSide(color: AppColors.glassBorder)),
+        boxShadow: AppShadows.purpleGlow,
+      ),
       child: PrimaryButton(
-        text: _isLoading ? 'PROCESSING...' : (_selectedMethod == PaymentMethod.PAY_ON_DELIVERY || grandTotal == 0 ? 'PLACE ORDER' : 'PAY ₹${grandTotal.toStringAsFixed(0)}'),
+        label: _isLoading ? 'PROCESSING...' : (_selectedMethod == PaymentMethod.PAY_ON_DELIVERY || _selectedMethod == PaymentMethod.PAY_LATER || grandTotal == 0 ? 'PLACE ORDER' : 'PAY ₹${grandTotal.toStringAsFixed(0)}'),
         onPressed: (_isLoading || ref.watch(cartProvider).isValidating) ? null : () => _processPayment(grandTotal, pointsToRedeem),
       ),
     );
@@ -369,63 +406,244 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   Future<void> _processPayment(double grandTotal, int pointsRedeemed) async {
     final seatSelection = ref.read(seatSelectionProvider);
+    final auth = ref.read(authProvider);
+    final isGuest = auth.status != AuthStatus.AUTHENTICATED;
     
-    // Final Location Confirmation Dialog
+    // Final Confirmation Dialog capturing details
     final confirmed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-        title: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(color: AppColors.primary.withOpacity(0.1), shape: BoxShape.circle),
-              child: const Icon(Icons.error_outline_rounded, color: AppColors.primary, size: 40),
-            ),
-            const SizedBox(height: 16),
-            const Text('CONFIRM LOCATION', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
-          ],
-        ),
-        content: Text(
-          'You are ordering to:\n\n${seatSelection.hallName}\n${seatSelection.screenName} • Seat ${seatSelection.seatLabel}\n\nIs this correct?',
-          textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('NO, CHANGE', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: Text(_selectedMethod == PaymentMethod.PAY_ON_DELIVERY ? 'YES, CONFIRM' : 'YES, PAY NOW'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final colorScheme = Theme.of(context).colorScheme;
+            return AlertDialog(
+              backgroundColor: colorScheme.surface,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+              title: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
+                    child: const Icon(Icons.error_outline_rounded, color: AppColors.primary, size: 40),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('CONFIRM DETAILS', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Location:\n${seatSelection.hallName}\n${seatSelection.screenName} • Seat ${seatSelection.seatLabel}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text('Delivery Contact', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                    const SizedBox(height: 16),
+                    if (isGuest) ...[
+                      TextField(
+                        controller: _firstNameController,
+                        decoration: InputDecoration(
+                          hintText: 'First Name',
+                          filled: true,
+                          fillColor: colorScheme.onSurface.withValues(alpha: 0.05),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _lastNameController,
+                        decoration: InputDecoration(
+                          hintText: 'Last Name',
+                          filled: true,
+                          fillColor: colorScheme.onSurface.withValues(alpha: 0.05),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    TextField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        hintText: 'Phone Number',
+                        filled: true,
+                        fillColor: colorScheme.onSurface.withValues(alpha: 0.05),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text('CANCEL', style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5))),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    if (_phoneController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Phone number is required.')));
+                      return;
+                    }
+                    if (isGuest && (_firstNameController.text.trim().isEmpty || _lastNameController.text.trim().isEmpty)) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Name is required for guest checkout.')));
+                      return;
+                    }
+                    Navigator.pop(context, true);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text((_selectedMethod == PaymentMethod.PAY_ON_DELIVERY || _selectedMethod == PaymentMethod.PAY_LATER) ? 'CONFIRM' : 'PAY NOW'),
+                ),
+              ],
+            );
+          }
+        );
+      },
     );
 
     if (confirmed != true) return;
+    
+    final phone = _phoneController.text.trim();
 
+    if (_selectedMethod == PaymentMethod.PAY_ON_DELIVERY) {
+      _initiateOtpFlow(phone, grandTotal, pointsRedeemed);
+    } else {
+      _finalizeOrder(grandTotal, pointsRedeemed, phone, null);
+    }
+  }
+
+  Future<void> _initiateOtpFlow(String phone, double grandTotal, int pointsRedeemed) async {
+    setState(() => _isLoading = true);
+    try {
+      // Use local dev server URL for emulator or real device
+      final baseUrl = BackendConfig.backendApiUrl;
+      final response = await http.post(
+        Uri.parse('$baseUrl/api/auth/send-otp'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'phone': phone}),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to send OTP. Please try again.');
+      }
+
+      final data = jsonDecode(response.body);
+      final sessionId = data['sessionId'];
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      _showOtpDialog(sessionId, phone, grandTotal, pointsRedeemed);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    }
+  }
+
+  void _showOtpDialog(String sessionId, String phone, double grandTotal, int pointsRedeemed) {
+    final otpController = TextEditingController();
+    bool isVerifying = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+              title: const Text('Verify Phone', style: TextStyle(fontWeight: FontWeight.w900)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Please enter the OTP sent to $phone to confirm Cash on Delivery.'),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: otpController,
+                    keyboardType: TextInputType.number,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, letterSpacing: 4),
+                    decoration: InputDecoration(
+                      hintText: '000000',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isVerifying ? null : () => Navigator.pop(context),
+                  child: const Text('CANCEL'),
+                ),
+                ElevatedButton(
+                  onPressed: isVerifying ? null : () async {
+                    final code = otpController.text.trim();
+                    if (code.isEmpty) return;
+
+                    setDialogState(() => isVerifying = true);
+                    try {
+                      final baseUrl = BackendConfig.backendApiUrl;
+                      final res = await http.post(
+                        Uri.parse('$baseUrl/api/auth/verify-otp'),
+                        headers: {'Content-Type': 'application/json'},
+                        body: jsonEncode({'sessionId': sessionId, 'otpCode': code}),
+                      );
+
+                      if (res.statusCode == 200) {
+                        final data = jsonDecode(res.body);
+                        final token = data['verificationToken'];
+                        if (mounted) Navigator.pop(context); // close dialog
+                        _finalizeOrder(grandTotal, pointsRedeemed, phone, token);
+                      } else {
+                        final errorData = jsonDecode(res.body);
+                        throw Exception(errorData['error'] ?? 'Invalid OTP');
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                      }
+                      setDialogState(() => isVerifying = false);
+                    }
+                  },
+                  child: isVerifying
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : const Text('VERIFY'),
+                ),
+              ],
+            );
+          }
+        );
+      },
+    );
+  }
+
+  Future<void> _finalizeOrder(double grandTotal, int pointsRedeemed, String phone, String? verificationToken) async {
     setState(() => _isLoading = true);
     
     try {
       final cart = ref.read(cartProvider);
       final cartNotifier = ref.read(cartProvider.notifier);
-      final auth = ref.read(authProvider);
+      final seatSelection = ref.read(seatSelectionProvider);
 
       final subtotal = cartNotifier.subtotal;
       final cgst = cartNotifier.cgst;
       final sgst = cartNotifier.sgst;
       final platformFee = cartNotifier.platformCharges;
 
-      // Feature 1+2: Include note, isCombo, comboId, comboName in each OrderItem
       int itemCounter = 0;
       final orderItems = cart.items.map((item) {
         final idx = itemCounter++;
@@ -440,28 +658,39 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         );
       }).toList();
 
+      final Map<String, dynamic> metadata = {
+        'subtotal': subtotal,
+        'cgst': cgst,
+        'sgst': sgst,
+        'platform_charges': platformFee,
+      };
+      
+      final auth = ref.read(authProvider);
+      if (auth.status != AuthStatus.AUTHENTICATED) {
+         metadata['guest_first_name'] = _firstNameController.text.trim();
+         metadata['guest_last_name'] = _lastNameController.text.trim();
+      }
+      
+      if (verificationToken != null) {
+        metadata['verificationToken'] = verificationToken;
+      }
+
       final order = await ref.read(ordersProvider.notifier).placeOrder(
         orderItems,
         grandTotal,
         seatSelection.displayLabel,
         paymentMethod: _selectedMethod,
-        customerPhone: auth.phone ?? 'guest',
+        customerPhone: phone,
         pointsRedeemed: pointsRedeemed,
-        metadata: {
-          'subtotal': subtotal,
-          'cgst': cgst,
-          'sgst': sgst,
-          'platform_charges': platformFee,
-        },
+        metadata: metadata,
       );
 
       if (order == null) throw Exception('Order could not be verified. Please check your connection.');
-      final latestOrder = order;
       
       ref.read(cartProvider.notifier).clearCart();
       if (mounted) {
         context.go('/success', extra: {
-          'orderId': latestOrder.displayId,
+          'orderId': order.displayId,
           'total': grandTotal,
           'location': seatSelection.displayLabel
         });

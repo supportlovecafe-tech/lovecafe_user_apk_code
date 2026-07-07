@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
+import '../../../../core/constants/app_gradients.dart';
+import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/models/combo_model.dart';
 
 /// Bottom sheet showing full combo details with item breakdown, savings highlight,
@@ -22,8 +24,10 @@ class ComboDetailPopup extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: AppColors.surfaceElevated.withValues(alpha: 0.95),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        border: Border(top: BorderSide(color: AppColors.glassBorder)),
+        boxShadow: AppShadows.purpleGlow,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -35,7 +39,7 @@ class ComboDetailPopup extends StatelessWidget {
               height: 5,
               margin: const EdgeInsets.only(top: 12, bottom: 20),
               decoration: BoxDecoration(
-                color: colorScheme.onSurface.withOpacity(0.12),
+                color: colorScheme.onSurface.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(3),
               ),
             ),
@@ -54,7 +58,7 @@ class ComboDetailPopup extends StatelessWidget {
                   Image.network(
                     combo.imageUrl,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(color: colorScheme.primary.withOpacity(0.1)),
+                    errorBuilder: (_, __, ___) => Container(color: colorScheme.primary.withValues(alpha: 0.1)),
                   ),
                   // Gradient
                   Positioned.fill(
@@ -63,7 +67,7 @@ class ComboDetailPopup extends StatelessWidget {
                         gradient: LinearGradient(
                           begin: Alignment.topCenter,
                           end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Colors.black.withOpacity(0.5)],
+                          colors: [Colors.transparent, Colors.black.withValues(alpha: 0.5)],
                         ),
                       ),
                     ),
@@ -132,7 +136,7 @@ class ComboDetailPopup extends StatelessWidget {
                             '₹${combo.originalPrice!.toInt()}',
                             style: TextStyle(
                               fontSize: 13,
-                              color: colorScheme.onSurface.withOpacity(0.35),
+                              color: colorScheme.onSurface.withValues(alpha: 0.35),
                               decoration: TextDecoration.lineThrough,
                             ),
                           ),
@@ -146,7 +150,7 @@ class ComboDetailPopup extends StatelessWidget {
                   Text(combo.description,
                       style: TextStyle(
                           fontSize: 13,
-                          color: colorScheme.onSurface.withOpacity(0.6),
+                          color: colorScheme.onSurface.withValues(alpha: 0.6),
                           height: 1.5)),
                 ],
 
@@ -157,7 +161,7 @@ class ComboDetailPopup extends StatelessWidget {
                       fontSize: 11,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.5,
-                      color: colorScheme.onSurface.withOpacity(0.4)),
+                      color: colorScheme.onSurface.withValues(alpha: 0.4)),
                 ),
                 const SizedBox(height: 12),
 
@@ -170,7 +174,7 @@ class ComboDetailPopup extends StatelessWidget {
                             width: 28,
                             height: 28,
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFF6B35).withOpacity(0.12),
+                              color: const Color(0xFFFF6B35).withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Center(
@@ -193,7 +197,7 @@ class ComboDetailPopup extends StatelessWidget {
                             '₹${(ci.foodItemPrice * ci.quantity).toInt()}',
                             style: TextStyle(
                                 fontSize: 13,
-                                color: colorScheme.onSurface.withOpacity(0.5),
+                                color: colorScheme.onSurface.withValues(alpha: 0.5),
                                 fontWeight: FontWeight.w600),
                           ),
                         ],
@@ -208,12 +212,12 @@ class ComboDetailPopup extends StatelessWidget {
                     children: [
                       Text('Total if bought separately',
                           style: TextStyle(
-                              fontSize: 12, color: colorScheme.onSurface.withOpacity(0.5))),
+                              fontSize: 12, color: colorScheme.onSurface.withValues(alpha: 0.5))),
                       Text(
                         '₹${combo.originalPrice!.toInt()}',
                         style: TextStyle(
                             fontSize: 12,
-                            color: colorScheme.onSurface.withOpacity(0.5),
+                            color: colorScheme.onSurface.withValues(alpha: 0.5),
                             decoration: TextDecoration.lineThrough),
                       ),
                     ],
@@ -251,17 +255,9 @@ class ComboDetailPopup extends StatelessWidget {
               height: 58,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFF6B35), Color(0xFFFF2D55)],
-                  ),
+                  gradient: AppGradients.primaryButton,
                   borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFFF2D55).withOpacity(0.35),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
+                  boxShadow: AppShadows.buttonPrimary,
                 ),
                 child: ElevatedButton.icon(
                   onPressed: () {

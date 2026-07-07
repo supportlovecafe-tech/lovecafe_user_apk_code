@@ -7,7 +7,7 @@ class BackendConfig {
   static const String supabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: _hardcodedAnonKey);
   static const String razorpayKeyId = String.fromEnvironment('RAZORPAY_KEY_ID');
   static const String adminPhoneList = String.fromEnvironment('ADMIN_PHONES');
-  static const String backendApiUrl = String.fromEnvironment('BACKEND_API_URL', defaultValue: 'http://127.0.0.1:3001');
+  static const String backendApiUrl = String.fromEnvironment('BACKEND_API_URL', defaultValue: 'https://admin.lovecafe.org.in');
 
   static bool get isSupabaseConfigured {
     final configured = supabaseUrl.isNotEmpty && 

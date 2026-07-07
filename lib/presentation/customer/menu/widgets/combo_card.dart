@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_shadows.dart';
 import '../../../../core/models/combo_model.dart';
 import '../../../shared/widgets/safe_network_image.dart';
 
@@ -26,16 +27,10 @@ class ComboCard extends StatelessWidget {
       onTap: onViewDetails,
       child: Container(
         decoration: BoxDecoration(
-          color: colorScheme.surface,
+          color: AppColors.surfaceElevated.withValues(alpha: 0.85),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: const Color(0xFFFF6B35).withOpacity(0.3), width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFFFF6B35).withOpacity(0.08),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3), width: 1.5),
+          boxShadow: AppShadows.pinkGlowSoft,
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
@@ -65,7 +60,7 @@ class ComboCard extends StatelessWidget {
                             end: Alignment.bottomCenter,
                             colors: [
                               Colors.transparent,
-                              Colors.black.withOpacity(0.6),
+                              Colors.black.withValues(alpha: 0.6),
                             ],
                             stops: const [0.4, 1.0],
                           ),
@@ -85,7 +80,7 @@ class ComboCard extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFFFF2D55).withOpacity(0.4),
+                              color: const Color(0xFFFF2D55).withValues(alpha: 0.4),
                               blurRadius: 8,
                             ),
                           ],
@@ -129,7 +124,7 @@ class ComboCard extends StatelessWidget {
                       child: Text(
                         combo.category,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: Colors.white.withValues(alpha: 0.7),
                           fontSize: 9,
                           fontWeight: FontWeight.w600,
                         ),
@@ -155,7 +150,7 @@ class ComboCard extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: combo.isVeg ? Colors.green : Colors.red,
                               shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white.withOpacity(0.5), width: 1),
+                              border: Border.all(color: Colors.white.withValues(alpha: 0.5), width: 1),
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -178,7 +173,7 @@ class ComboCard extends StatelessWidget {
                         combo.items.map((i) => '${i.quantity}× ${i.foodItemName}').join(' + '),
                         style: TextStyle(
                           fontSize: 9,
-                          color: colorScheme.onSurface.withOpacity(0.5),
+                          color: colorScheme.onSurface.withValues(alpha: 0.5),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -203,7 +198,7 @@ class ComboCard extends StatelessWidget {
                                   '₹${combo.originalPrice!.toInt()}',
                                   style: TextStyle(
                                     fontSize: 10,
-                                    color: colorScheme.onSurface.withOpacity(0.4),
+                                    color: colorScheme.onSurface.withValues(alpha: 0.4),
                                     decoration: TextDecoration.lineThrough,
                                   ),
                                 ),
@@ -221,7 +216,7 @@ class ComboCard extends StatelessWidget {
                                 borderRadius: BorderRadius.circular(10),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFFFF2D55).withOpacity(0.3),
+                                    color: const Color(0xFFFF2D55).withValues(alpha: 0.3),
                                     blurRadius: 8,
                                     offset: const Offset(0, 3),
                                   ),

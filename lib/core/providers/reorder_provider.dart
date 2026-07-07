@@ -1,7 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/food_item.dart';
-import '../models/order_model.dart';
-import '../services/supabase_service.dart';
 import 'auth_provider.dart';
 import 'seat_selection_provider.dart';
 import 'supabase_provider.dart';

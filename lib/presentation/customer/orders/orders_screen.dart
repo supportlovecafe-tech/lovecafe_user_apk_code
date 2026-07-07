@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:lottie/lottie.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/constants/app_gradients.dart';
+import '../../../core/constants/app_shadows.dart';
 import '../../../core/providers/orders_provider.dart';
 import '../../../core/models/order_model.dart';
 import '../../../core/providers/chat_provider.dart';
@@ -35,8 +36,6 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final allOrders = ref.watch(ordersProvider);
 
     final activeOrders = allOrders.where((o) =>
@@ -48,35 +47,35 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
         o.status == OrderStatus.CANCELLED).toList();
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: AppColors.bg,
       body: Column(
         children: [
-          _buildAppBar(context, theme, colorScheme, allOrders.length),
-          _buildTabBar(theme, colorScheme, activeOrders.length, completedOrders.length),
+          _buildAppBar(context, allOrders.length),
+          _buildTabBar(activeOrders.length, completedOrders.length),
           Expanded(
             child: TabBarView(
               controller: _tabController,
               children: [
                 // Tab 1: Active Orders
                 activeOrders.isEmpty
-                    ? _buildEmptyState(context, theme, colorScheme, isActive: true)
+                    ? _buildEmptyState(context, isActive: true)
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                         itemCount: activeOrders.length,
                         itemBuilder: (context, index) {
                           final order = activeOrders[index];
-                          return _buildActiveOrderCard(context, theme, colorScheme, order);
+                          return _buildActiveOrderCard(context, order);
                         },
                       ),
                 // Tab 2: Transaction History
                 completedOrders.isEmpty
-                    ? _buildEmptyState(context, theme, colorScheme, isActive: false)
+                    ? _buildEmptyState(context, isActive: false)
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                         itemCount: completedOrders.length,
                         itemBuilder: (context, index) {
                           final order = completedOrders[index];
-                          return _buildHistoryCard(context, theme, colorScheme, order);
+                          return _buildHistoryCard(context, order);
                         },
                       ),
               ],
@@ -88,14 +87,14 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildAppBar(BuildContext context, ThemeData theme, ColorScheme colorScheme, int count) {
+  Widget _buildAppBar(BuildContext context, int count) {
     return AppBar(
       backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       leading: IconButton(
-        icon: Icon(Icons.arrow_back_ios_new_rounded,
-            color: colorScheme.onSurface, size: 20),
+        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+            color: AppColors.textPrimary, size: 18),
         onPressed: () {
           if (Navigator.of(context).canPop()) {
             context.pop();
@@ -104,8 +103,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
           }
         },
       ),
-      title: Text('My Orders',
-          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
+      title: Text('My Orders', style: AppTextStyles.headingSmall),
       centerTitle: true,
       actions: [
         if (count > 0)
@@ -114,15 +112,12 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
               margin: const EdgeInsets.only(right: 24),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: colorScheme.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
                 '$count',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: colorScheme.primary,
-                  fontWeight: FontWeight.w900,
-                ),
+                style: AppTextStyles.labelLarge.copyWith(color: AppColors.primary),
               ),
             ),
           ),
@@ -130,29 +125,25 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildTabBar(ThemeData theme, ColorScheme colorScheme, int activeCount, int historyCount) {
+  Widget _buildTabBar(int activeCount, int historyCount) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       decoration: BoxDecoration(
-        color: colorScheme.onSurface.withOpacity(0.05),
+        color: AppColors.surface,
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
         borderRadius: BorderRadius.circular(16),
       ),
       child: TabBar(
         controller: _tabController,
         indicator: BoxDecoration(
-          color: colorScheme.primary,
+          color: AppColors.primary,
           borderRadius: BorderRadius.circular(14),
         ),
         indicatorSize: TabBarIndicatorSize.tab,
-        labelColor: colorScheme.onPrimary,
-        unselectedLabelColor: colorScheme.onSurface.withOpacity(0.5),
-        labelStyle: theme.textTheme.labelMedium?.copyWith(
-          fontWeight: FontWeight.w900,
-          letterSpacing: 0.5,
-        ),
-        unselectedLabelStyle: theme.textTheme.labelMedium?.copyWith(
-          fontWeight: FontWeight.w600,
-        ),
+        labelColor: Colors.white,
+        unselectedLabelColor: AppColors.textDisabled,
+        labelStyle: AppTextStyles.labelMedium,
+        unselectedLabelStyle: AppTextStyles.labelMedium.copyWith(fontWeight: FontWeight.normal),
         dividerColor: Colors.transparent,
         tabs: [
           Tab(text: 'Active ($activeCount)'),
@@ -162,7 +153,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, ThemeData theme, ColorScheme colorScheme, {required bool isActive}) {
+  Widget _buildEmptyState(BuildContext context, {required bool isActive}) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -170,32 +161,38 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
           Container(
             padding: const EdgeInsets.all(32),
             decoration: BoxDecoration(
-              color: colorScheme.primary.withOpacity(0.05),
+              color: AppColors.primary.withValues(alpha: 0.06),
               shape: BoxShape.circle,
             ),
             child: Icon(
                 isActive ? Icons.receipt_long_rounded : Icons.history_rounded,
-                size: 80, color: colorScheme.primary.withOpacity(0.3)),
+                size: 72, color: AppColors.primary.withValues(alpha: 0.35)),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 28),
           Text(isActive ? 'No active orders' : 'No past orders',
-              style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 12),
+              style: AppTextStyles.headingMedium),
+          const SizedBox(height: 10),
           Text(
               isActive
                   ? 'Place an order to see live tracking here.'
                   : 'Your completed orders will appear here.',
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface.withOpacity(0.6))),
+              style: AppTextStyles.bodyMedium),
           if (isActive) ...[
-            const SizedBox(height: 40),
-            ElevatedButton(
-              onPressed: () => context.go('/menu'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            const SizedBox(height: 36),
+            GestureDetector(
+              onTap: () => context.go('/menu'),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 36, vertical: 14),
+                decoration: BoxDecoration(
+                  gradient: AppGradients.primaryButton,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: AppShadows.buttonPrimary,
+                ),
+                child: Text('Explore Menu',
+                    style: AppTextStyles.buttonMedium),
               ),
-              child: const Text('EXPLORE MENU'),
             ),
           ],
         ],
@@ -205,42 +202,36 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
 
   // ============ ACTIVE ORDER CARD ============
 
-  Widget _buildActiveOrderCard(BuildContext context, ThemeData theme, ColorScheme colorScheme, OrderModel order) {
+  Widget _buildActiveOrderCard(BuildContext context, OrderModel order) {
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(32),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.onSurface.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        color: AppColors.surfaceElevated.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.glassBorder),
+        boxShadow: AppShadows.purpleGlow,
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(24),
         child: Column(
           children: [
-            _buildOrderHeader(theme, colorScheme, order),
-            _buildOrderDetails(theme, colorScheme, order),
+            _buildOrderHeader(order),
+            _buildOrderDetails(order),
             Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: colorScheme.primary.withOpacity(0.03),
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+                color: AppColors.primary.withValues(alpha: 0.04),
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
               ),
               child: Column(
                 children: [
-                  _buildTrackingTimeline(context, theme, colorScheme, order.status),
+                  _buildTrackingTimeline(context, order.status),
                   const SizedBox(height: 16),
-                  _buildStatusMessage(theme, colorScheme, order.status),
+                  _buildStatusMessage(order.status),
                   const SizedBox(height: 16),
-                   _buildTrackButton(context, theme, colorScheme, order),
-                   const SizedBox(height: 12),
-                   _buildChatButton(context, theme, colorScheme, order),
+                  _buildTrackButton(context, order),
+                  const SizedBox(height: 12),
+                  _buildChatButton(context, order),
                 ],
               ),
             ),
@@ -250,7 +241,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildChatButton(BuildContext context, ThemeData theme, ColorScheme colorScheme, OrderModel order) {
+  Widget _buildChatButton(BuildContext context, OrderModel order) {
     final hasNewMessages = ref.watch(hasNewChatMessagesProvider);
     
     return Container(
@@ -258,7 +249,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: colorScheme.primary.withOpacity(0.3),
+            color: AppColors.primary.withValues(alpha: 0.3),
             blurRadius: 12,
             spreadRadius: 2,
           ),
@@ -280,8 +271,8 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
                 child: Container(
                   width: 8,
                   height: 8,
-                  decoration: BoxDecoration(
-                    color: colorScheme.primary,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
                     shape: BoxShape.circle,
                   ),
                 ),
@@ -291,15 +282,15 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
         label: const Text('CONTACT OUTLET'),
         style: OutlinedButton.styleFrom(
           minimumSize: const Size.fromHeight(56),
-          side: BorderSide(color: colorScheme.primary.withOpacity(hasNewMessages ? 1.0 : 0.5), width: hasNewMessages ? 2 : 1),
+          side: BorderSide(color: AppColors.primary.withValues(alpha: hasNewMessages ? 1.0 : 0.5), width: hasNewMessages ? 2 : 1),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          backgroundColor: hasNewMessages ? colorScheme.primary.withOpacity(0.05) : null,
+          backgroundColor: hasNewMessages ? AppColors.primary.withValues(alpha: 0.05) : null,
         ),
       ),
     );
   }
 
-  Widget _buildStatusMessage(ThemeData theme, ColorScheme colorScheme, OrderStatus status) {
+  Widget _buildStatusMessage(OrderStatus status) {
     String message;
     IconData icon;
     Color color;
@@ -317,20 +308,20 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
       case OrderStatus.READY:
         message = '🎉 Your food is ready to serve! Our staff will deliver it shortly.';
         icon = Icons.celebration_rounded;
-        color = Colors.green;
+        color = AppColors.success;
         break;
       default:
         message = '';
         icon = Icons.info_outline;
-        color = colorScheme.outline;
+        color = AppColors.textDisabled;
     }
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.15)),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
       ),
       child: Row(
         children: [
@@ -339,7 +330,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
           Expanded(
             child: Text(
               message,
-              style: theme.textTheme.bodySmall?.copyWith(
+              style: AppTextStyles.bodySmall.copyWith(
                 color: color,
                 fontWeight: FontWeight.w600,
               ),
@@ -352,20 +343,20 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
 
   // ============ HISTORY CARD ============
 
-  Widget _buildHistoryCard(BuildContext context, ThemeData theme, ColorScheme colorScheme, OrderModel order) {
+  Widget _buildHistoryCard(BuildContext context, OrderModel order) {
     final isDelivered = order.status == OrderStatus.DELIVERED;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: AppColors.surfaceElevated.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.06)),
+        border: Border.all(color: AppColors.glassBorder),
       ),
       child: Column(
         children: [
-          _buildOrderHeader(theme, colorScheme, order),
-          _buildOrderDetails(theme, colorScheme, order),
+          _buildOrderHeader(order),
+          _buildOrderDetails(order),
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
             child: Row(
@@ -374,7 +365,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color: (isDelivered ? Colors.green : colorScheme.error).withOpacity(0.08),
+                      color: (isDelivered ? AppColors.success : AppColors.error).withValues(alpha: 0.08),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -383,14 +374,13 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
                         Icon(
                           isDelivered ? Icons.check_circle_rounded : Icons.cancel_rounded,
                           size: 18,
-                          color: isDelivered ? Colors.green : colorScheme.error,
+                          color: isDelivered ? AppColors.success : AppColors.error,
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          isDelivered ? 'Delivered Successfully' : 'Order Cancelled',
-                          style: theme.textTheme.labelMedium?.copyWith(
-                            color: isDelivered ? Colors.green : colorScheme.error,
-                            fontWeight: FontWeight.w800,
+                          isDelivered ? 'Delivered' : 'Cancelled',
+                          style: AppTextStyles.labelMedium.copyWith(
+                            color: isDelivered ? AppColors.success : AppColors.error,
                           ),
                         ),
                       ],
@@ -403,14 +393,11 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    side: BorderSide(color: colorScheme.outline.withOpacity(0.1)),
+                    side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
                   ),
                   child: Text(
                     'REORDER',
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1,
-                    ),
+                    style: AppTextStyles.labelSmall.copyWith(letterSpacing: 1),
                   ),
                 ),
               ],
@@ -423,7 +410,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
 
   // ============ SHARED WIDGETS ============
 
-  Widget _buildOrderHeader(ThemeData theme, ColorScheme colorScheme, OrderModel order) {
+  Widget _buildOrderHeader(OrderModel order) {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Row(
@@ -434,8 +421,8 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
             children: [
               Text(
                 'ORDER ${order.displayId.toUpperCase()}',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: colorScheme.primary,
+                style: AppTextStyles.labelSmall.copyWith(
+                  color: AppColors.primary,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1,
                 ),
@@ -443,19 +430,17 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
               const SizedBox(height: 4),
               Text(
                 DateFormat('MMM dd, yyyy • hh:mm a').format(order.timestamp),
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurface.withOpacity(0.5),
-                ),
+                style: AppTextStyles.bodySmall.copyWith(color: AppColors.textDisabled),
               ),
             ],
           ),
-          _buildStatusChip(theme, colorScheme, order.status),
+          _buildStatusChip(order.status),
         ],
       ),
     );
   }
 
-  Widget _buildOrderDetails(ThemeData theme, ColorScheme colorScheme, OrderModel order) {
+  Widget _buildOrderDetails(OrderModel order) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
       child: Column(
@@ -463,12 +448,12 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
           Row(
             children: [
               Icon(Icons.location_on_rounded,
-                  size: 16, color: colorScheme.primary.withOpacity(0.5)),
+                  size: 16, color: AppColors.textDisabled),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   order.location,
-                  style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+                  style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold),
                 ),
               ),
             ],
@@ -488,10 +473,10 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
                             margin: const EdgeInsets.only(right: 12),
                             padding: const EdgeInsets.all(4),
                             decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.1),
+                              color: AppColors.success.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.check_circle_rounded, color: Colors.green, size: 16),
+                            child: const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 16),
                           ),
                         // Feature 2: combo badge
                         if (item.isCombo)
@@ -508,13 +493,13 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              color: isItemDelivered ? Colors.green.withOpacity(0.1) : colorScheme.primary.withOpacity(0.1),
+                              color: isItemDelivered ? AppColors.success.withValues(alpha: 0.1) : AppColors.primary.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               '${item.quantity}x',
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: isItemDelivered ? Colors.green : colorScheme.primary,
+                              style: AppTextStyles.labelSmall.copyWith(
+                                color: isItemDelivered ? AppColors.success : AppColors.primary,
                                 fontWeight: FontWeight.w900,
                               ),
                             ),
@@ -523,17 +508,15 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
                         Expanded(
                           child: Text(
                             item.foodItem.name,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: isItemDelivered ? Colors.green : null,
+                            style: AppTextStyles.titleMedium.copyWith(
+                              color: isItemDelivered ? AppColors.success : null,
                             ),
                           ),
                         ),
                         Text(
                           '₹${(item.foodItem.price * item.quantity).toInt()}',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            color: isItemDelivered ? Colors.green : null,
+                          style: AppTextStyles.priceSmall.copyWith(
+                            color: isItemDelivered ? AppColors.success : null,
                           ),
                         ),
                       ],
@@ -544,14 +527,14 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
                         padding: const EdgeInsets.only(top: 4, left: 4),
                         child: Row(
                           children: [
-                            Icon(Icons.notes_rounded, size: 11, color: colorScheme.onSurface.withOpacity(0.35)),
+                            Icon(Icons.notes_rounded, size: 11, color: AppColors.textDisabled),
                             const SizedBox(width: 5),
                             Expanded(
                               child: Text(
                                 item.note!,
-                                style: theme.textTheme.bodySmall?.copyWith(
+                                style: AppTextStyles.bodySmall.copyWith(
                                   fontSize: 11,
-                                  color: colorScheme.onSurface.withOpacity(0.5),
+                                  color: AppColors.textDisabled,
                                   fontStyle: FontStyle.italic,
                                 ),
                                 maxLines: 2,
@@ -566,29 +549,28 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
               );
           }),
           const SizedBox(height: 12),
-          Divider(color: colorScheme.outline.withOpacity(0.1)),
+          Divider(color: Colors.white.withValues(alpha: 0.05)),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
                 'Payment Method',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurface.withOpacity(0.5),
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textDisabled,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: colorScheme.secondary.withOpacity(0.1),
+                  color: AppColors.secondary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   order.paymentMethod.name.replaceAll('DEMO_', '').replaceAll('_', ' '),
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    color: colorScheme.secondary,
-                    fontWeight: FontWeight.w900,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.secondary,
                   ),
                 ),
               ),
@@ -598,16 +580,10 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Amount Paid',
-                style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
-              ),
+              Text('Amount Paid', style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.bold)),
               Text(
                 '₹${order.totalAmount.toInt()}',
-                style: theme.textTheme.titleLarge?.copyWith(
-                  color: colorScheme.primary,
-                  fontWeight: FontWeight.w900,
-                ),
+                style: AppTextStyles.headingSmall.copyWith(color: AppColors.primary),
               ),
             ],
           ),
@@ -616,29 +592,28 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildTrackButton(BuildContext context, ThemeData theme, ColorScheme colorScheme, OrderModel order) {
-    return ElevatedButton(
-      onPressed: () => _showTrackingSheet(context, order),
-      style: ElevatedButton.styleFrom(
-        minimumSize: const Size.fromHeight(56),
-        backgroundColor: colorScheme.primary,
-        foregroundColor: colorScheme.onPrimary,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      ),
-      child: Text(
-        'LIVE TRACKING',
-        style: theme.textTheme.labelLarge?.copyWith(
-          color: colorScheme.onPrimary,
-          fontWeight: FontWeight.w900,
-          letterSpacing: 1.5,
+  Widget _buildTrackButton(BuildContext context, OrderModel order) {
+    return GestureDetector(
+      onTap: () => _showTrackingSheet(context, order),
+      child: Container(
+        height: 56,
+        decoration: BoxDecoration(
+          gradient: AppGradients.primaryButton,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: AppShadows.buttonPrimary,
+        ),
+        child: Center(
+          child: Text(
+            'Live Tracking',
+            style: AppTextStyles.buttonLarge,
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildStatusChip(ThemeData theme, ColorScheme colorScheme, OrderStatus status) {
-    Color color = colorScheme.outline;
+  Widget _buildStatusChip(OrderStatus status) {
+    Color color = AppColors.textDisabled;
     String label = status.name;
 
     switch (status) {
@@ -647,11 +622,11 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
         label = 'ORDER PLACED';
         break;
       case OrderStatus.PREPARING:
-        color = Colors.blue;
+        color = AppColors.primary;
         label = 'PREPARING';
         break;
       case OrderStatus.READY:
-        color = Colors.green;
+        color = AppColors.success;
         label = 'READY TO SERVE';
         break;
       case OrderStatus.DELIVERED:
@@ -659,7 +634,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
         label = 'DELIVERED';
         break;
       case OrderStatus.CANCELLED:
-        color = colorScheme.error;
+        color = AppColors.error;
         label = 'CANCELLED';
         break;
     }
@@ -667,13 +642,19 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withValues(alpha: 0.2),
+            blurRadius: 8,
+          ),
+        ],
       ),
       child: Text(
         label,
-        style: theme.textTheme.labelSmall?.copyWith(
+        style: AppTextStyles.labelSmall.copyWith(
           color: color,
           fontWeight: FontWeight.w900,
           fontSize: 10,
@@ -683,7 +664,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildTrackingTimeline(BuildContext context, ThemeData theme, ColorScheme colorScheme, OrderStatus status) {
+  Widget _buildTrackingTimeline(BuildContext context, OrderStatus status) {
     final steps = <_TrackStep>[
       const _TrackStep(
           label: 'Order Placed', icon: Icons.receipt_long_rounded, isActive: true),
@@ -701,7 +682,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         for (int i = 0; i < steps.length; i++) ...[
-          _timelineItem(theme, colorScheme, steps[i]),
+          _timelineItem(steps[i]),
           if (i < steps.length - 1)
             Expanded(
               child: Container(
@@ -710,8 +691,8 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      steps[i].isActive ? colorScheme.primary : colorScheme.outline.withOpacity(0.2),
-                      steps[i+1].isActive ? colorScheme.primary : colorScheme.outline.withOpacity(0.2),
+                      steps[i].isActive ? AppColors.primary : Colors.white.withValues(alpha: 0.1),
+                      steps[i+1].isActive ? AppColors.primary : Colors.white.withValues(alpha: 0.1),
                     ],
                   ),
                 ),
@@ -722,23 +703,24 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
     );
   }
 
-  Widget _timelineItem(ThemeData theme, ColorScheme colorScheme, _TrackStep step) {
-    final color = step.isActive ? colorScheme.primary : colorScheme.onSurface.withOpacity(0.2);
+  Widget _timelineItem(_TrackStep step) {
+    final color = step.isActive ? AppColors.primary : AppColors.textDisabled;
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: step.isActive ? colorScheme.primary.withOpacity(0.1) : Colors.transparent,
+            color: step.isActive ? AppColors.primary.withValues(alpha: 0.1) : Colors.transparent,
             shape: BoxShape.circle,
             border: Border.all(color: color, width: 2),
+            boxShadow: step.isActive ? AppShadows.pinkGlowSoft : [],
           ),
           child: Icon(step.icon, size: 16, color: color),
         ),
         const SizedBox(height: 8),
         Text(
           step.label,
-          style: theme.textTheme.labelSmall?.copyWith(
+          style: AppTextStyles.labelSmall.copyWith(
             color: color,
             fontWeight: step.isActive ? FontWeight.w900 : FontWeight.normal,
             fontSize: 8,
@@ -749,9 +731,6 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
   }
 
   void _showTrackingSheet(BuildContext context, OrderModel order) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -759,12 +738,12 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
       builder: (context) => Container(
         padding: const EdgeInsets.fromLTRB(24, 12, 24, 40),
         decoration: BoxDecoration(
-          color: colorScheme.surface,
+          color: AppColors.surfaceElevated.withValues(alpha: 0.95),
           borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 30,
+              color: AppColors.primary.withValues(alpha: 0.15),
+              blurRadius: 50,
               offset: const Offset(0, -10),
             ),
           ],
@@ -779,7 +758,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
                 height: 6,
                 margin: const EdgeInsets.only(bottom: 32),
                 decoration: BoxDecoration(
-                  color: colorScheme.onSurface.withOpacity(0.1),
+                  color: Colors.white.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(3),
                 ),
               ),
@@ -789,37 +768,41 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: colorScheme.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(Icons.delivery_dining_rounded, color: colorScheme.primary),
+                  child: const Icon(Icons.delivery_dining_rounded, color: AppColors.primary),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Live Tracking',
-                          style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
+                      Text('Live Tracking', style: AppTextStyles.headingMedium),
                       Text('Order ID: ${order.id.substring(0, order.id.length > 8 ? 8 : order.id.length).toUpperCase()}', 
-                          style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurface.withOpacity(0.5))),
+                          style: AppTextStyles.bodySmall.copyWith(color: AppColors.textDisabled)),
                     ],
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 48),
-            _buildTrackingTimeline(context, theme, colorScheme, order.status),
+            _buildTrackingTimeline(context, order.status),
             const SizedBox(height: 32),
-            _buildStatusMessage(theme, colorScheme, order.status),
+            _buildStatusMessage(order.status),
             const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(64),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Container(
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Center(
+                  child: Text('CLOSE', style: AppTextStyles.buttonMedium),
+                ),
               ),
-              child: const Text('CLOSE'),
             ),
           ],
         ),
@@ -863,7 +846,7 @@ class _ChatSheetState extends ConsumerState<_ChatSheet> {
     return Container(
       height: MediaQuery.of(context).size.height * 0.8,
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: AppColors.surfaceElevated.withValues(alpha: 0.95),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
       ),
       child: Column(
@@ -892,7 +875,7 @@ class _ChatSheetState extends ConsumerState<_ChatSheet> {
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 12, 12, 12),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: colorScheme.outline.withOpacity(0.05))),
+        border: Border(bottom: BorderSide(color: colorScheme.outline.withValues(alpha: 0.05))),
       ),
       child: Column(
         children: [
@@ -901,14 +884,14 @@ class _ChatSheetState extends ConsumerState<_ChatSheet> {
             height: 4,
             margin: const EdgeInsets.only(bottom: 20),
             decoration: BoxDecoration(
-              color: colorScheme.onSurface.withOpacity(0.1),
+              color: colorScheme.onSurface.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(2),
             ),
           ),
           Row(
             children: [
               CircleAvatar(
-                backgroundColor: colorScheme.primary.withOpacity(0.1),
+                backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
                 child: Icon(Icons.storefront_rounded, color: colorScheme.primary, size: 20),
               ),
               const SizedBox(width: 12),
@@ -918,7 +901,7 @@ class _ChatSheetState extends ConsumerState<_ChatSheet> {
                   children: [
                     Text('Outlet Support', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900)),
                     Text('Replying to Order #${widget.order.id.substring(0,6).toUpperCase()}', 
-                        style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurface.withOpacity(0.5))),
+                        style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurface.withValues(alpha: 0.5))),
                   ],
                 ),
               ),
@@ -938,16 +921,16 @@ class _ChatSheetState extends ConsumerState<_ChatSheet> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.chat_bubble_outline_rounded, size: 48, color: colorScheme.primary.withOpacity(0.2)),
+          Icon(Icons.chat_bubble_outline_rounded, size: 48, color: colorScheme.primary.withValues(alpha: 0.2)),
           const SizedBox(height: 16),
-          Text('No messages yet', style: theme.textTheme.titleSmall?.copyWith(color: colorScheme.onSurface.withOpacity(0.3))),
+          Text('No messages yet', style: theme.textTheme.titleSmall?.copyWith(color: colorScheme.onSurface.withValues(alpha: 0.3))),
           const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 48),
             child: Text(
               'Send a message to the outlet staff regarding your order.',
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurface.withOpacity(0.3)),
+              style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurface.withValues(alpha: 0.3)),
             ),
           ),
         ],
@@ -963,7 +946,7 @@ class _ChatSheetState extends ConsumerState<_ChatSheet> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.7),
         decoration: BoxDecoration(
-          color: isMe ? colorScheme.primary : colorScheme.surfaceVariant.withOpacity(0.5),
+          color: isMe ? colorScheme.primary : colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(20).copyWith(
             bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(20),
             bottomLeft: isMe ? const Radius.circular(20) : const Radius.circular(4),
@@ -984,7 +967,7 @@ class _ChatSheetState extends ConsumerState<_ChatSheet> {
       padding: EdgeInsets.fromLTRB(24, 16, 24, 16 + MediaQuery.of(context).viewInsets.bottom),
       decoration: BoxDecoration(
         color: colorScheme.surface,
-        border: Border(top: BorderSide(color: colorScheme.outline.withOpacity(0.05))),
+        border: Border(top: BorderSide(color: colorScheme.outline.withValues(alpha: 0.05))),
       ),
       child: Row(
         children: [
@@ -992,7 +975,7 @@ class _ChatSheetState extends ConsumerState<_ChatSheet> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               decoration: BoxDecoration(
-                color: colorScheme.onSurface.withOpacity(0.05),
+                color: colorScheme.onSurface.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(28),
               ),
               child: TextField(

@@ -122,7 +122,7 @@ class SeatSelectionNotifier extends StateNotifier<SeatSelectionState> {
     required String screenName,
     required String seatLabel,
   }) async {
-    List<String>? methods = ['DEMO_UPI', 'DEMO_CARD', 'PAY_ON_DELIVERY'];
+    List<String>? methods = ['DEMO_UPI', 'DEMO_CARD', 'PAY_ON_DELIVERY', 'PAY_LATER'];
     try {
       final response = await Supabase.instance.client
           .from('cinemas')

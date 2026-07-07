@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
+import '../../../core/constants/app_gradients.dart';
+import '../../../core/constants/app_shadows.dart';
 import '../../../core/providers/cart_provider.dart';
 import '../../../core/providers/seat_selection_provider.dart';
 import '../../../core/providers/offers_provider.dart';
@@ -16,14 +19,13 @@ class CartScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
     final cart = ref.watch(cartProvider);
     final total = cart.items.fold<double>(
         0, (sum, item) => sum + (item.foodItem.price * item.quantity));
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: AppColors.bg,
+      extendBody: true,
       body: Column(
         children: [
           _buildAppBar(context),
@@ -42,28 +44,27 @@ class CartScreen extends ConsumerWidget {
   }
 
   Widget _buildAppBar(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    
     return AppBar(
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.bg,
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       leading: IconButton(
-        icon: Icon(Icons.arrow_back_ios_new_rounded,
-            color: colorScheme.onSurface, size: 20),
-        onPressed: () => context.pop(),
+        icon: const Icon(Icons.arrow_back_ios_new_rounded,
+            color: AppColors.textPrimary, size: 18),
+        onPressed: () {
+          if (context.canPop()) {
+            context.pop();
+          } else {
+            context.go('/menu');
+          }
+        },
       ),
-      title: Text('My Cart',
-          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900)),
+      title: Text('My Cart', style: AppTextStyles.headingSmall),
       centerTitle: true,
     );
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(40.0),
@@ -73,32 +74,40 @@ class CartScreen extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(32),
               decoration: BoxDecoration(
-                color: colorScheme.primary.withOpacity(0.05),
+                color: AppColors.primary.withValues(alpha: 0.06),
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.shopping_bag_outlined,
-                  size: 80, color: colorScheme.primary.withOpacity(0.3)),
+                  size: 72, color: AppColors.primary.withValues(alpha: 0.35)),
             ),
-            const SizedBox(height: 32),
-            Text('Your cart is empty', 
-                style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)),
-            const SizedBox(height: 12),
-            Text('Add some delicious food to start your premium dining experience!',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface.withOpacity(0.6))),
-            const SizedBox(height: 40),
-            ElevatedButton(
-              onPressed: () => context.go('/menu'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            const SizedBox(height: 28),
+            Text('Your cart is empty',
+                style: AppTextStyles.headingMedium),
+            const SizedBox(height: 10),
+            Text(
+              'Add some delicious food to start\nyour premium dining experience!',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodyMedium,
+            ),
+            const SizedBox(height: 36),
+            GestureDetector(
+              onTap: () => context.go('/menu'),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 36, vertical: 14),
+                decoration: BoxDecoration(
+                  gradient: AppGradients.primaryButton,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: AppShadows.buttonPrimary,
+                ),
+                child: Text('Explore Menu',
+                    style: AppTextStyles.buttonMedium),
               ),
-              child: const Text('EXPLORE MENU'),
             ),
           ],
         ),
       ),
-    );
+    ).animate().fadeIn(duration: 300.ms);
   }
 
   Widget _buildCartList(BuildContext context, WidgetRef ref, List<CartItem> cart) {
@@ -137,51 +146,44 @@ class CartScreen extends ConsumerWidget {
   }
 
   Widget _buildCartItem(BuildContext context, WidgetRef ref, CartItem item) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.onSurface.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        color: AppColors.surfaceElevated.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.glassBorder),
+        boxShadow: AppShadows.purpleGlow,
       ),
       child: Column(
         children: [
           Row(
             children: [
-              SafeNetworkImage(
-                imageUrl: item.foodItem.imageUrl,
-                width: 90,
-                height: 90,
-                fit: BoxFit.cover,
-                borderRadius: BorderRadius.circular(16),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: SafeNetworkImage(
+                  imageUrl: item.foodItem.imageUrl,
+                  width: 80,
+                  height: 80,
+                  fit: BoxFit.cover,
+                  borderRadius: BorderRadius.circular(14),
+                ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       item.foodItem.name,
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                      style: AppTextStyles.titleMedium,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 5),
                     Text(
-                      '₹${item.foodItem.price.toInt()}',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: colorScheme.primary,
-                        fontWeight: FontWeight.w900,
-                      ),
+                      '₹${item.foodItem.price.toInt()} each',
+                      style: AppTextStyles.priceSmall,
                     ),
                   ],
                 ),
@@ -191,25 +193,23 @@ class CartScreen extends ConsumerWidget {
           ),
           if (item.note != null && item.note!.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: 16),
+              padding: const EdgeInsets.only(top: 12),
               child: Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: colorScheme.onSurface.withOpacity(0.03),
-                  borderRadius: BorderRadius.circular(12),
+                  color: AppColors.surfaceElevated,
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
                   children: [
                     Icon(Icons.notes_rounded,
-                        color: colorScheme.onSurface.withOpacity(0.4), size: 16),
+                        color: AppColors.textDisabled, size: 14),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         item.note!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurface.withOpacity(0.6),
-                          fontStyle: FontStyle.italic,
-                        ),
+                        style: AppTextStyles.bodySmall
+                            .copyWith(fontStyle: FontStyle.italic),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -218,8 +218,8 @@ class CartScreen extends ConsumerWidget {
                       onTap: () => _showNoteEditor(context, ref, item),
                       child: Text(
                         'EDIT',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                            color: colorScheme.primary,
+                        style: AppTextStyles.labelSmall.copyWith(
+                            color: AppColors.primary,
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1),
                       ),
@@ -230,18 +230,18 @@ class CartScreen extends ConsumerWidget {
             )
           else
             Padding(
-              padding: const EdgeInsets.only(top: 12),
+              padding: const EdgeInsets.only(top: 10),
               child: InkWell(
                 onTap: () => _showNoteEditor(context, ref, item),
                 child: Row(
                   children: [
                     Icon(Icons.add_comment_outlined,
-                        size: 14, color: colorScheme.primary.withOpacity(0.6)),
-                    const SizedBox(width: 8),
+                        size: 13, color: AppColors.primary.withValues(alpha: 0.6)),
+                    const SizedBox(width: 6),
                     Text(
                       'Add a note',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: colorScheme.primary.withOpacity(0.6),
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.primary.withValues(alpha: 0.6),
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -306,15 +306,15 @@ class CartScreen extends ConsumerWidget {
   Widget _buildQuantityPicker(WidgetRef ref, CartItem item) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainer,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.surfaceContainerHigh),
+        color: AppColors.surfaceElevated.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.glassBorder),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           _pickerButton(
-            icon: Icons.remove,
+            icon: Icons.remove_rounded,
             onTap: () => ref
                 .read(cartProvider.notifier)
                 .updateQuantity(item.foodItem.id, -1),
@@ -322,17 +322,16 @@ class CartScreen extends ConsumerWidget {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              '${item.quantity}',
-              style: AppTextStyles.headingMedium.copyWith(fontSize: 14),
-            ),
+            child: Text('${item.quantity}',
+                style: AppTextStyles.titleLarge),
           ),
           _pickerButton(
-            icon: Icons.add,
+            icon: Icons.add_rounded,
             onTap: () => ref
                 .read(cartProvider.notifier)
                 .updateQuantity(item.foodItem.id, 1),
             color: AppColors.primary,
+            isPrimary: true,
           ),
         ],
       ),
@@ -342,13 +341,22 @@ class CartScreen extends ConsumerWidget {
   Widget _pickerButton(
       {required IconData icon,
       required VoidCallback onTap,
-      required Color color}) {
-    return InkWell(
+      required Color color,
+      bool isPrimary = false}) {
+    return GestureDetector(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
       child: Container(
-        padding: const EdgeInsets.all(8),
-        child: Icon(icon, size: 18, color: color),
+        padding: const EdgeInsets.all(9),
+        decoration: isPrimary
+            ? BoxDecoration(
+                gradient: AppGradients.primaryButton,
+                borderRadius: const BorderRadius.only(
+                  topRight: Radius.circular(14),
+                  bottomRight: Radius.circular(14),
+                ),
+              )
+            : null,
+        child: Icon(icon, size: 16, color: isPrimary ? Colors.white : color),
       ),
     );
   }
@@ -356,8 +364,7 @@ class CartScreen extends ConsumerWidget {
   Widget _buildSummary(BuildContext context, WidgetRef ref, double subtotal) {
     final seatSelection = ref.watch(seatSelectionProvider);
     final cartNotifier = ref.watch(cartProvider.notifier);
-    final colorScheme = Theme.of(context).colorScheme;
-    
+
     final discount = cartNotifier.discount;
     final cgst = cartNotifier.cgst;
     final sgst = cartNotifier.sgst;
@@ -365,17 +372,12 @@ class CartScreen extends ConsumerWidget {
     final total = cartNotifier.totalAmount;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.12),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
+        color: AppColors.surfaceElevated.withValues(alpha: 0.95),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+        border: Border(top: BorderSide(color: AppColors.glassBorder)),
+        boxShadow: AppShadows.purpleGlow,
       ),
       child: SafeArea(
         top: false,
@@ -383,37 +385,54 @@ class CartScreen extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             _summaryRow('Subtotal', '₹${subtotal.toStringAsFixed(2)}'),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             if (discount > 0) ...[
               _summaryRow('Promo Savings', '-₹${discount.toStringAsFixed(2)}', isPromo: true),
-              const SizedBox(height: 8),
+              const SizedBox(height: 6),
             ],
             _summaryRow('CGST (2.5%)', '₹${cgst.toStringAsFixed(2)}'),
-            const SizedBox(height: 8),
+            const SizedBox(height: 6),
             _summaryRow('SGST (2.5%)', '₹${sgst.toStringAsFixed(2)}'),
-            const SizedBox(height: 8),
-            _summaryRow('Platform Fee (1%)', '₹${platformCharges.toStringAsFixed(2)}'),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Divider(height: 1),
+            const SizedBox(height: 6),
+            _summaryRow(
+              'Platform Fee (${cartNotifier.platformFeePercent.toStringAsFixed(cartNotifier.platformFeePercent == cartNotifier.platformFeePercent.toInt() ? 0 : 1)}%)',
+              '₹${platformCharges.toStringAsFixed(2)}',
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Divider(height: 1, color: AppColors.divider),
             ),
             _summaryRow('Grand Total', '₹${total.toStringAsFixed(2)}',
                 isMain: true),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: () {
+            const SizedBox(height: 20),
+            // Gradient checkout button
+            GestureDetector(
+              onTap: () {
                 if (!seatSelection.isComplete) {
                   _showLocationSelection(context, ref);
                   return;
                 }
                 context.push('/checkout');
               },
-              child: Text(
-                seatSelection.isComplete
-                    ? 'PROCEED TO CHECKOUT'
-                    : 'SELECT SEAT TO CONTINUE',
+              child: Container(
+                width: double.infinity,
+                height: 56,
+                decoration: BoxDecoration(
+                  gradient: AppGradients.primaryButton,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: AppShadows.buttonPrimary,
+                ),
+                child: Center(
+                  child: Text(
+                    seatSelection.isComplete
+                        ? 'Proceed to Checkout'
+                        : 'Select Seat to Continue',
+                    style: AppTextStyles.buttonLarge,
+                  ),
+                ),
               ),
             ),
+            const SizedBox(height: 16),
           ],
         ),
       ),
@@ -460,12 +479,12 @@ class CartScreen extends ConsumerWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.amber.withOpacity(0.18), Colors.orange.withOpacity(0.08)],
+                  colors: [Colors.amber.withValues(alpha: 0.18), Colors.orange.withValues(alpha: 0.08)],
                 ),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.amber.withOpacity(0.3)),
+                border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
                 boxShadow: [
-                  BoxShadow(color: Colors.amber.withOpacity(0.05), blurRadius: 10)
+                  BoxShadow(color: Colors.amber.withValues(alpha: 0.05), blurRadius: 10)
                 ],
               ),
               child: Row(
@@ -473,7 +492,7 @@ class CartScreen extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.amber.withOpacity(0.2),
+                      color: Colors.amber.withValues(alpha: 0.2),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.card_giftcard_rounded, color: Colors.amber, size: 20),

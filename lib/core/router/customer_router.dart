@@ -3,7 +3,7 @@ import '../../presentation/customer/onboarding/splash_screen.dart';
 import '../../presentation/customer/onboarding/welcome_screen.dart';
 import '../../presentation/customer/auth/login_screen.dart';
 import '../../presentation/customer/auth/signup_screen.dart';
-import '../../presentation/customer/auth/otp_verification_screen.dart';
+import '../../presentation/customer/auth/forgot_password_screen.dart';
 import '../../presentation/customer/home/home_screen.dart';
 import '../../presentation/customer/menu/menu_screen.dart';
 import '../../presentation/customer/menu/cart_screen.dart';
@@ -34,11 +34,8 @@ final customerRouter = GoRouter(
       builder: (context, state) => const SignupScreen(),
     ),
     GoRoute(
-      path: '/otp-verification',
-      builder: (context, state) {
-        final data = state.extra as Map<String, dynamic>;
-        return OtpVerificationScreen(signupData: data);
-      },
+      path: '/forgot-password',
+      builder: (context, state) => const ForgotPasswordScreen(),
     ),
     GoRoute(
       path: '/home',

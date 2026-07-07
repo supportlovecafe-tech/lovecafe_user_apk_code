@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import '../services/backend_config.dart';
 import '../services/auth_service.dart';
 import 'cart_provider.dart';
 import 'seat_selection_provider.dart';
@@ -11,8 +13,6 @@ import 'menu_provider.dart';
 import 'combo_provider.dart';
 import 'reorder_provider.dart';
 
-
-
 enum AuthStatus { AUTHENTICATED, GUEST, UNAUTHENTICATED }
 
 class AuthState {
@@ -20,19 +20,16 @@ class AuthState {
   final String? userId;
   final String? userName;
   final String? email;
-  final String? phone;
   final String? avatarUrl;
-
-  final bool isDemo;
+  final String? phone;
 
   AuthState({
     required this.status,
     this.userId,
     this.userName,
     this.email,
-    this.phone,
     this.avatarUrl,
-    this.isDemo = false,
+    this.phone,
   });
 
   factory AuthState.unauthenticated() => AuthState(status: AuthStatus.UNAUTHENTICATED);
@@ -40,18 +37,16 @@ class AuthState {
     required String id, 
     String? email,
     String? userName,
-    String? phone,
     String? avatarUrl,
-    bool isDemo = false,
+    String? phone,
   }) => 
     AuthState(
       status: AuthStatus.AUTHENTICATED, 
       userId: id, 
       email: email,
       userName: userName,
-      phone: phone,
       avatarUrl: avatarUrl,
-      isDemo: isDemo,
+      phone: phone,
     );
 
   Map<String, dynamic> toMap() {
@@ -60,9 +55,8 @@ class AuthState {
       'userId': userId,
       'userName': userName,
       'email': email,
-      'phone': phone,
       'avatarUrl': avatarUrl,
-      'isDemo': isDemo,
+      'phone': phone,
     };
   }
 
@@ -72,16 +66,15 @@ class AuthState {
       userId: map['userId'],
       userName: map['userName'],
       email: map['email'],
-      phone: map['phone'],
       avatarUrl: map['avatarUrl'],
-      isDemo: map['isDemo'] ?? false,
+      phone: map['phone'],
     );
   }
 }
 
 class AuthNotifier extends StateNotifier<AuthState> {
   final Ref _ref;
-  static const String _storageKey = 'ce_auth_state';
+  static const String _storageKey = 'ce_auth_state_v2';
 
   AuthNotifier(this._ref) : super(AuthState.unauthenticated()) {
     _listenToAuthChanges();
@@ -95,12 +88,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
         try {
           final client = _ref.read(authServiceProvider).client;
           var profile = await client
-              .from('profiles')
-              .select()
-              .eq('id', user.id)
-              .maybeSingle();
-
-          profile ??= await client
               .from('customer_profiles')
               .select()
               .eq('id', user.id)
@@ -115,17 +102,18 @@ class AuthNotifier extends StateNotifier<AuthState> {
             id: user.id,
             email: user.email ?? profile?['email'],
             userName: fullName,
+            avatarUrl: profile?['avatar_url'] ?? user.userMetadata?['avatar_url'],
             phone: profile?['phone'] ?? user.phone,
-            avatarUrl: profile?['avatar_url'],
           );
         } catch (e) {
           state = AuthState.authenticated(
             id: user.id,
             email: user.email,
+            phone: user.phone,
           );
         }
         _persistState();
-      } else if (!state.isDemo && state.status == AuthStatus.AUTHENTICATED) {
+      } else if (state.status == AuthStatus.AUTHENTICATED) {
         state = AuthState.unauthenticated();
         _persistState();
       }
@@ -159,65 +147,93 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> signInWithGoogle() async {
-    await _ref.read(authServiceProvider).signInWithGoogle();
-  }
-
-  Future<void> signIn(String phone, String password) async {
-    final cleanPhone = phone.trim();
-    
-    final result = await _ref.read(authServiceProvider).signInWithPhone(phone: cleanPhone, password: password);
-    
-    if (result.containsKey('demo_user')) {
-      final user = result['demo_user'] as Map<String, dynamic>;
-      state = AuthState.authenticated(
-        id: user['id'].toString(),
-        phone: user['phone'],
-        userName: '${user['first_name']} ${user['last_name']}',
-        email: user['email'],
-        avatarUrl: user['avatar_url'],
-        isDemo: true,
-      );
-      _persistState();
+    final success = await _ref.read(authServiceProvider).signInWithGoogle();
+    if (!success) {
+      throw 'Google sign-in failed or was canceled.';
     }
-    // If it's a real user, the listener _listenToAuthChanges will handle it
   }
 
-  Future<void> signUp({
+  Future<void> signInWithEmail(String email, String password) async {
+    await _ref.read(authServiceProvider).signInWithEmail(email: email.trim(), password: password);
+  }
+
+  Future<void> signUpWithEmail({
     required String firstName,
     required String lastName,
-    required String phone,
-    String? email,
+    required String email,
     required String password,
   }) async {
-    final result = await _ref.read(authServiceProvider).signUpWithPhone(
-      phone: phone,
+    final Map<String, dynamic> data = {
+      'role': 'CUSTOMER',
+      'first_name': firstName,
+      'last_name': lastName,
+      'full_name': '$firstName $lastName',
+    };
+    
+    // If it's a proxy email, extract the phone number
+    if (email.endsWith('@cinemaeats.local')) {
+      data['phone'] = email.split('@')[0];
+    } else {
+      data['email'] = email.trim(); // store real email in profile
+    }
+
+    await _ref.read(authServiceProvider).signUpWithEmail(
+      email: email.trim(),
       password: password,
-      data: {
-        'role': 'CUSTOMER',
-        'first_name': firstName,
-        'last_name': lastName,
-        'full_name': '$firstName $lastName',
-        if (email != null) 'email': email,
-      },
+      data: data,
+    );
+  }
+
+  Future<void> loginWithPhone({
+    required String phone,
+    required String otpCode,
+    String? firstName,
+    String? lastName,
+  }) async {
+    final baseUrl = BackendConfig.backendApiUrl;
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth/phone-login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'phone': phone,
+        'otpCode': otpCode,
+        'firstName': firstName,
+        'lastName': lastName,
+      }),
     );
 
-    if (result.containsKey('demo_user')) {
-      final user = result['demo_user'] as Map<String, dynamic>;
-      state = AuthState.authenticated(
-        id: user['id'].toString(),
-        phone: user['phone'],
-        userName: '${user['first_name']} ${user['last_name']}',
-        email: user['email'],
-        isDemo: true,
-      );
-      _persistState();
+    if (response.statusCode != 200) {
+      final errorData = jsonDecode(response.body);
+      throw Exception(errorData['error'] ?? 'Phone login failed');
     }
+
+    final data = jsonDecode(response.body);
+    final email = data['email'];
+    final password = data['password'];
+
+    // 2. Sign in with the returned proxy email and secure one-time password
+    await signInWithEmail(email, password);
+  }
+
+  Future<void> resetPassword(String email) async {
+    await _ref.read(authServiceProvider).sendPasswordResetEmail(email.trim());
+  }
+
+  Future<void> resetPasswordWithOtp({
+    required String email,
+    required String otp,
+    required String newPassword,
+  }) async {
+    await _ref.read(authServiceProvider).resetPasswordWithOtp(
+      email: email.trim(),
+      otp: otp.trim(),
+      newPassword: newPassword,
+    );
   }
 
   Future<void> updateProfile({
     String? firstName,
     String? lastName,
-    String? email,
     String? avatarUrl,
   }) async {
     final Map<String, dynamic> data = {};
@@ -226,55 +242,29 @@ class AuthNotifier extends StateNotifier<AuthState> {
     if (firstName != null || lastName != null) {
       data['full_name'] = '${firstName ?? state.userName?.split(' ')[0] ?? ''} ${lastName ?? state.userName?.split(' ').skip(1).join(' ') ?? ''}'.trim();
     }
-    if (email != null) data['email'] = email;
     if (avatarUrl != null) data['avatar_url'] = avatarUrl;
 
-    if (state.isDemo) {
-      await _ref.read(authServiceProvider).updateCustomerProfile(state.userId!, data);
-    } else {
-      await _ref.read(authServiceProvider).updateProfile(data);
-    }
+    await _ref.read(authServiceProvider).updateProfile(data);
     
     // Update local state
     state = AuthState.authenticated(
       id: state.userId!,
-      email: email ?? state.email,
+      email: state.email,
       userName: data['full_name'] ?? state.userName,
-      phone: state.phone,
       avatarUrl: avatarUrl ?? state.avatarUrl,
-      isDemo: state.isDemo,
+      phone: state.phone,
     );
     _persistState();
   }
 
-  Future<void> requestPhoneOtp(String phone) async {
-    await _ref.read(authServiceProvider).sendPhoneOtp(phone);
-  }
-
-  Future<bool> verifyPhoneOtp({
-    required String phone,
-    required String otp,
-  }) async {
-    try {
-      await _ref.read(authServiceProvider).verifyPhoneOtp(phone: phone, token: otp);
-      return true;
-    } catch (_) {
-      return false;
-    }
-  }
-
   Future<void> logout() async {
-    // 1. Sign out from the backend auth service (safe for demo users too)
     await _ref.read(authServiceProvider).signOut();
     
-    // 2. FULL STORAGE CLEAR
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
     
-    // 3. Reset auth state
     state = AuthState.unauthenticated();
     
-    // 4. PURGE ALL IN-MEMORY STATE
     _ref.invalidate(cartProvider);
     _ref.invalidate(seatSelectionProvider);
     _ref.invalidate(ordersProvider);
@@ -284,7 +274,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _ref.invalidate(comboProvider);
     _ref.invalidate(reorderProvider);
     
-    // 5. Re-persist clean unauthenticated state
     _persistState();
   }
 }

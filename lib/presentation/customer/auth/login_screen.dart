@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../core/constants/app_colors.dart';
-import '../../../core/constants/app_text_styles.dart';
 import '../../../core/providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -13,18 +11,31 @@ class LoginScreen extends ConsumerStatefulWidget {
 }
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
-  final _phoneController = TextEditingController();
+  final _emailOrPhoneController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  Future<void> _login() async {
-    final phone = _phoneController.text.trim();
+  Future<void> _signIn() async {
+    final emailOrPhone = _emailOrPhoneController.text.trim();
     final password = _passwordController.text.trim();
-    if (phone.isEmpty || password.isEmpty) return;
-    
+
+    if (emailOrPhone.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter both email/phone and password')),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
-      await ref.read(authProvider.notifier).signIn(phone, password);
+      String email = emailOrPhone;
+      if (!email.contains('@')) {
+        final phone = emailOrPhone.replaceAll(RegExp(r'\D'), '');
+        email = '$phone@cinemaeats.local';
+      }
+
+      await ref.read(authProvider.notifier).signInWithEmail(email, password);
+
       if (!mounted) return;
       context.go('/home');
     } catch (error) {
@@ -59,7 +70,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: colorScheme.background,
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
@@ -92,7 +103,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             Text(
               'Welcome back to the ultimate cinematic gourmet experience.',
               style: theme.textTheme.bodyLarge?.copyWith(
-                color: colorScheme.onSurface.withOpacity(0.6),
+                color: colorScheme.onSurface.withValues(alpha: 0.6),
                 height: 1.5,
               ),
             ),
@@ -102,10 +113,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               decoration: BoxDecoration(
                 color: colorScheme.surface,
                 borderRadius: BorderRadius.circular(32),
-                border: Border.all(color: colorScheme.outline.withOpacity(0.1)),
+                border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
                 boxShadow: [
                   BoxShadow(
-                    color: colorScheme.onSurface.withOpacity(0.05),
+                    color: colorScheme.onSurface.withValues(alpha: 0.05),
                     blurRadius: 30,
                     offset: const Offset(0, 15),
                   ),
@@ -115,19 +126,37 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 children: [
                   _buildInputField(
                     context,
-                    label: 'PHONE NUMBER',
-                    controller: _phoneController,
-                    hint: '+91 98765 43210',
-                    icon: Icons.phone_android_rounded,
+                    label: 'EMAIL OR PHONE',
+                    controller: _emailOrPhoneController,
+                    hint: 'user@example.com or 9876543210',
+                    icon: Icons.contact_mail_rounded,
+                    keyboardType: TextInputType.emailAddress,
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 20),
                   _buildInputField(
                     context,
                     label: 'PASSWORD',
                     controller: _passwordController,
                     hint: '••••••••',
-                    isPassword: true,
                     icon: Icons.lock_outline_rounded,
+                    obscureText: true,
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => context.push('/forgot-password'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: colorScheme.primary,
+                        padding: EdgeInsets.zero,
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      child: const Text(
+                        'Forgot Password?',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -140,14 +169,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: colorScheme.primary.withOpacity(0.3),
+                    color: colorScheme.primary.withValues(alpha: 0.3),
                     blurRadius: 30,
                     offset: const Offset(0, 15),
                   ),
                 ],
               ),
               child: ElevatedButton(
-                onPressed: _isLoading ? null : _login,
+                onPressed: _isLoading ? null : _signIn,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: colorScheme.primary,
                   foregroundColor: colorScheme.onPrimary,
@@ -166,7 +195,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         ),
                       )
                     : Text(
-                        'CONTINUE TO DINING',
+                        'LOGIN',
                         style: theme.textTheme.labelLarge?.copyWith(
                           color: colorScheme.onPrimary,
                           letterSpacing: 2,
@@ -178,19 +207,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             const SizedBox(height: 24),
             Row(
               children: [
-                Expanded(child: Divider(color: colorScheme.outline.withOpacity(0.1))),
+                Expanded(child: Divider(color: colorScheme.outline.withValues(alpha: 0.1))),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Text(
                     'OR CONTINUE WITH',
                     style: theme.textTheme.labelSmall?.copyWith(
-                      color: colorScheme.onSurface.withOpacity(0.3),
+                      color: colorScheme.onSurface.withValues(alpha: 0.3),
                       fontWeight: FontWeight.w900,
                       letterSpacing: 1.5,
                     ),
                   ),
                 ),
-                Expanded(child: Divider(color: colorScheme.outline.withOpacity(0.1))),
+                Expanded(child: Divider(color: colorScheme.outline.withValues(alpha: 0.1))),
               ],
             ),
             const SizedBox(height: 24),
@@ -203,7 +232,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
                 ),
-                side: BorderSide(color: colorScheme.outline.withOpacity(0.1)),
+                side: BorderSide(color: colorScheme.outline.withValues(alpha: 0.1)),
                 foregroundColor: colorScheme.onSurface,
                 textStyle: theme.textTheme.labelLarge?.copyWith(
                   fontWeight: FontWeight.w900,
@@ -217,7 +246,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 child: RichText(
                   text: TextSpan(
                     text: "Don't have an account? ",
-                    style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface.withOpacity(0.5)),
+                    style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface.withValues(alpha: 0.5)),
                     children: [
                       TextSpan(
                         text: 'SIGN UP',
@@ -226,6 +255,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ],
                   ),
                 ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextButton(
+              onPressed: () {
+                ref.read(authProvider.notifier).loginAsGuest();
+                context.go('/home');
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+              child: const Text(
+                'CONTINUE AS GUEST',
+                style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2),
               ),
             ),
             const SizedBox(height: 24),
@@ -241,7 +284,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     required TextEditingController controller,
     required String hint,
     required IconData icon,
-    bool isPassword = false,
+    TextInputType? keyboardType,
+    bool obscureText = false,
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -260,12 +304,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         const SizedBox(height: 12),
         TextField(
           controller: controller,
-          obscureText: isPassword,
+          keyboardType: keyboardType,
+          obscureText: obscureText,
           decoration: InputDecoration(
             hintText: hint,
-            prefixIcon: Icon(icon, size: 20, color: colorScheme.primary.withOpacity(0.5)),
+            prefixIcon: Icon(icon, size: 20, color: colorScheme.primary.withValues(alpha: 0.5)),
             filled: true,
-            fillColor: colorScheme.onSurface.withOpacity(0.03),
+            fillColor: colorScheme.onSurface.withValues(alpha: 0.03),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(20),
               borderSide: BorderSide.none,
@@ -276,7 +321,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(20),
-              borderSide: BorderSide(color: colorScheme.primary.withOpacity(0.5)),
+              borderSide: BorderSide(color: colorScheme.primary.withValues(alpha: 0.5)),
             ),
             contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
           ),
