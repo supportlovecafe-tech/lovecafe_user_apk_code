@@ -410,13 +410,20 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     final isGuest = auth.status != AuthStatus.AUTHENTICATED;
     
     // Final Confirmation Dialog capturing details
-    final confirmed = await showDialog<bool>(
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
       barrierDismissible: false,
       builder: (context) {
+        bool otpSent = false;
+        bool isProcessing = false;
+        String? sessionId;
+        final otpController = TextEditingController();
+
         return StatefulBuilder(
           builder: (context, setDialogState) {
             final colorScheme = Theme.of(context).colorScheme;
+            final requiresOtp = _selectedMethod == PaymentMethod.PAY_ON_DELIVERY;
+
             return AlertDialog(
               backgroundColor: colorScheme.surface,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
@@ -425,10 +432,10 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
-                    child: const Icon(Icons.error_outline_rounded, color: AppColors.primary, size: 40),
+                    child: Icon(requiresOtp ? Icons.security_rounded : Icons.error_outline_rounded, color: AppColors.primary, size: 40),
                   ),
                   const SizedBox(height: 16),
-                  const Text('CONFIRM DETAILS', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
+                  Text(requiresOtp ? 'CONFIRM & VERIFY' : 'CONFIRM DETAILS', textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
                 ],
               ),
               content: SingleChildScrollView(
@@ -446,6 +453,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     if (isGuest) ...[
                       TextField(
                         controller: _firstNameController,
+                        enabled: !otpSent && !isProcessing,
                         decoration: InputDecoration(
                           hintText: 'First Name',
                           filled: true,
@@ -457,6 +465,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       const SizedBox(height: 12),
                       TextField(
                         controller: _lastNameController,
+                        enabled: !otpSent && !isProcessing,
                         decoration: InputDecoration(
                           hintText: 'Last Name',
                           filled: true,
@@ -470,6 +479,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                     TextField(
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
+                      enabled: !otpSent && !isProcessing,
                       decoration: InputDecoration(
                         hintText: 'Phone Number',
                         filled: true,
@@ -478,16 +488,35 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
                     ),
+                    if (requiresOtp && otpSent) ...[
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: otpController,
+                        keyboardType: TextInputType.number,
+                        textAlign: TextAlign.center,
+                        enabled: !isProcessing,
+                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, letterSpacing: 4),
+                        decoration: InputDecoration(
+                          hintText: '000000',
+                          filled: true,
+                          fillColor: colorScheme.onSurface.withValues(alpha: 0.05),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text('Please enter the 6-digit OTP sent to your phone.', textAlign: TextAlign.center, style: TextStyle(fontSize: 12, color: Colors.grey)),
+                    ],
                   ],
                 ),
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context, false),
+                  onPressed: isProcessing ? null : () => Navigator.pop(context, {'confirmed': false}),
                   child: Text('CANCEL', style: TextStyle(color: colorScheme.onSurface.withValues(alpha: 0.5))),
                 ),
                 ElevatedButton(
-                  onPressed: () {
+                  onPressed: isProcessing ? null : () async {
                     if (_phoneController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Phone number is required.')));
                       return;
@@ -496,14 +525,77 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Name is required for guest checkout.')));
                       return;
                     }
-                    Navigator.pop(context, true);
+
+                    if (requiresOtp) {
+                      if (!otpSent) {
+                        // Send OTP
+                        setDialogState(() => isProcessing = true);
+                        try {
+                          final baseUrl = BackendConfig.backendApiUrl;
+                          final response = await http.post(
+                            Uri.parse('$baseUrl/api/auth/send-otp'),
+                            headers: {'Content-Type': 'application/json'},
+                            body: jsonEncode({'phone': _phoneController.text.trim()}),
+                          );
+
+                          if (response.statusCode == 200) {
+                            final data = jsonDecode(response.body);
+                            sessionId = data['sessionId'];
+                            setDialogState(() {
+                              otpSent = true;
+                              isProcessing = false;
+                            });
+                          } else {
+                            throw Exception('Failed to send OTP. Please try again.');
+                          }
+                        } catch (e) {
+                          setDialogState(() => isProcessing = false);
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                        }
+                      } else {
+                        // Verify OTP
+                        final code = otpController.text.trim();
+                        if (code.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter the OTP.')));
+                          return;
+                        }
+                        setDialogState(() => isProcessing = true);
+                        try {
+                          final baseUrl = BackendConfig.backendApiUrl;
+                          final res = await http.post(
+                            Uri.parse('$baseUrl/api/auth/verify-otp'),
+                            headers: {'Content-Type': 'application/json'},
+                            body: jsonEncode({'sessionId': sessionId, 'otpCode': code}),
+                          );
+
+                          if (res.statusCode == 200) {
+                            final data = jsonDecode(res.body);
+                            final token = data['verificationToken'];
+                            Navigator.pop(context, {'confirmed': true, 'token': token});
+                          } else {
+                            final errorData = jsonDecode(res.body);
+                            throw Exception(errorData['error'] ?? 'Invalid OTP');
+                          }
+                        } catch (e) {
+                          setDialogState(() => isProcessing = false);
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                        }
+                      }
+                    } else {
+                      // Non-OTP flow
+                      Navigator.pop(context, {'confirmed': true});
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
-                  child: Text((_selectedMethod == PaymentMethod.PAY_ON_DELIVERY || _selectedMethod == PaymentMethod.PAY_LATER) ? 'CONFIRM' : 'PAY NOW'),
+                  child: isProcessing
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : Text(requiresOtp 
+                          ? (otpSent ? 'VERIFY & SUBMIT' : 'SEND OTP') 
+                          : ((_selectedMethod == PaymentMethod.PAY_LATER) ? 'CONFIRM' : 'PAY NOW')),
                 ),
               ],
             );
@@ -512,123 +604,12 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       },
     );
 
-    if (confirmed != true) return;
+    if (result == null || result['confirmed'] != true) return;
     
     final phone = _phoneController.text.trim();
+    final token = result['token'];
 
-    if (_selectedMethod == PaymentMethod.PAY_ON_DELIVERY) {
-      _initiateOtpFlow(phone, grandTotal, pointsRedeemed);
-    } else {
-      _finalizeOrder(grandTotal, pointsRedeemed, phone, null);
-    }
-  }
-
-  Future<void> _initiateOtpFlow(String phone, double grandTotal, int pointsRedeemed) async {
-    setState(() => _isLoading = true);
-    try {
-      // Use local dev server URL for emulator or real device
-      final baseUrl = BackendConfig.backendApiUrl;
-      final response = await http.post(
-        Uri.parse('$baseUrl/api/auth/send-otp'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'phone': phone}),
-      );
-
-      if (response.statusCode != 200) {
-        throw Exception('Failed to send OTP. Please try again.');
-      }
-
-      final data = jsonDecode(response.body);
-      final sessionId = data['sessionId'];
-
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-
-      _showOtpDialog(sessionId, phone, grandTotal, pointsRedeemed);
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-      }
-    }
-  }
-
-  void _showOtpDialog(String sessionId, String phone, double grandTotal, int pointsRedeemed) {
-    final otpController = TextEditingController();
-    bool isVerifying = false;
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              backgroundColor: Theme.of(context).colorScheme.surface,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-              title: const Text('Verify Phone', style: TextStyle(fontWeight: FontWeight.w900)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text('Please enter the OTP sent to $phone to confirm Cash on Delivery.'),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: otpController,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 24, letterSpacing: 4),
-                    decoration: InputDecoration(
-                      hintText: '000000',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isVerifying ? null : () => Navigator.pop(context),
-                  child: const Text('CANCEL'),
-                ),
-                ElevatedButton(
-                  onPressed: isVerifying ? null : () async {
-                    final code = otpController.text.trim();
-                    if (code.isEmpty) return;
-
-                    setDialogState(() => isVerifying = true);
-                    try {
-                      final baseUrl = BackendConfig.backendApiUrl;
-                      final res = await http.post(
-                        Uri.parse('$baseUrl/api/auth/verify-otp'),
-                        headers: {'Content-Type': 'application/json'},
-                        body: jsonEncode({'sessionId': sessionId, 'otpCode': code}),
-                      );
-
-                      if (res.statusCode == 200) {
-                        final data = jsonDecode(res.body);
-                        final token = data['verificationToken'];
-                        if (mounted) Navigator.pop(context); // close dialog
-                        _finalizeOrder(grandTotal, pointsRedeemed, phone, token);
-                      } else {
-                        final errorData = jsonDecode(res.body);
-                        throw Exception(errorData['error'] ?? 'Invalid OTP');
-                      }
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
-                      }
-                      setDialogState(() => isVerifying = false);
-                    }
-                  },
-                  child: isVerifying
-                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                      : const Text('VERIFY'),
-                ),
-              ],
-            );
-          }
-        );
-      },
-    );
+    _finalizeOrder(grandTotal, pointsRedeemed, phone, token);
   }
 
   Future<void> _finalizeOrder(double grandTotal, int pointsRedeemed, String phone, String? verificationToken) async {
