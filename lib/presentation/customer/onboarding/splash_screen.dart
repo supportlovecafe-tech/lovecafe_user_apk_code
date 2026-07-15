@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:video_player/video_player.dart';
 import '../../../core/providers/auth_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
@@ -10,37 +11,45 @@ class SplashScreen extends ConsumerStatefulWidget {
   ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
+class _SplashScreenState extends ConsumerState<SplashScreen> {
+  late VideoPlayerController _videoController;
   bool _hasNavigated = false;
 
   @override
   void initState() {
     super.initState();
-    
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    );
-    
-    _fadeAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
-    );
-
-    _startSplashSequence();
+    _initializeVideo();
   }
 
-  Future<void> _startSplashSequence() async {
-    // Show the splash screen for 2.5 seconds
-    await Future.delayed(const Duration(milliseconds: 2500));
+  Future<void> _initializeVideo() async {
+    // Make sure the user places their video here
+    _videoController = VideoPlayerController.asset('assets/videos/splash.mp4');
     
-    if (!mounted || _hasNavigated) return;
-    
-    // Fade out the splash screen
-    await _animationController.forward();
-    
-    _navigateNext();
+    try {
+      await _videoController.initialize();
+      _videoController.setLooping(false);
+      _videoController.play();
+      
+      // Wait for the video to finish playing
+      _videoController.addListener(() {
+        if (_videoController.value.position >= _videoController.value.duration && !_hasNavigated) {
+          _navigateNext();
+        }
+      });
+      
+      // Fallback in case video fails to finish for some reason
+      Future.delayed(_videoController.value.duration + const Duration(seconds: 1), () {
+        if (!_hasNavigated) _navigateNext();
+      });
+      
+      setState(() {});
+    } catch (e) {
+      // Fallback if video is missing or fails to load
+      debugPrint('Error loading splash video: $e');
+      Future.delayed(const Duration(seconds: 2), () {
+        if (!_hasNavigated) _navigateNext();
+      });
+    }
   }
 
   void _navigateNext() {
@@ -59,7 +68,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
 
   @override
   void dispose() {
-    _animationController.dispose();
+    _videoController.dispose();
     super.dispose();
   }
 
@@ -69,17 +78,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
     ref.watch(authProvider);
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Center(
-          child: Image.asset(
-            'assets/logo_transparent.png',
-            width: 260,
-            height: 260,
-            fit: BoxFit.contain,
-          ),
-        ),
+      backgroundColor: Colors.black, // Usually black for video splash
+      body: Center(
+        child: _videoController.value.isInitialized
+            ? AspectRatio(
+                aspectRatio: _videoController.value.aspectRatio,
+                child: VideoPlayer(_videoController),
+              )
+            : const CircularProgressIndicator(), // Fallback while loading
       ),
     );
   }
