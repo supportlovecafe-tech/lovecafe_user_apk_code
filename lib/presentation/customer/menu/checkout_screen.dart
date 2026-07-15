@@ -521,6 +521,16 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Phone number is required.')));
                       return;
                     }
+                    
+                    String sanitizedPhone = _phoneController.text.replaceAll(RegExp(r'\D'), '');
+                    if (sanitizedPhone.startsWith('91') && sanitizedPhone.length == 12) {
+                      sanitizedPhone = sanitizedPhone.substring(2);
+                    }
+                    if (sanitizedPhone.length != 10) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter a valid 10-digit phone number.')));
+                      return;
+                    }
+
                     if (isGuest && (_firstNameController.text.trim().isEmpty || _lastNameController.text.trim().isEmpty)) {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Name is required for guest checkout.')));
                       return;

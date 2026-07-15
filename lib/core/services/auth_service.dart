@@ -75,9 +75,16 @@ class AuthService {
     const iosClientId = '997876784016-7qpmk4bl6oatmq8ed8tud0fl4ds07tkr.apps.googleusercontent.com';
 
     try {
+      String? platformClientId;
+      if (kIsWeb) {
+        platformClientId = webClientId;
+      } else if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) {
+        platformClientId = iosClientId;
+      }
+
       final GoogleSignIn googleSignIn = GoogleSignIn(
         serverClientId: webClientId,
-        clientId: kIsWeb ? webClientId : iosClientId,
+        clientId: platformClientId,
       );
       
       // Force account picker to show by signing out of any cached sessions first
@@ -105,7 +112,7 @@ class AuthService {
       return response.session != null;
     } catch (e) {
       print('Google sign-in error: $e');
-      return false;
+      throw Exception('Google sign-in error: $e');
     }
   }
 

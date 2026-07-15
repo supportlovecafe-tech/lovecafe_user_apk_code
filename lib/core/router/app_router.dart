@@ -2,7 +2,6 @@ import 'package:go_router/go_router.dart';
 
 // Onboarding
 import '../../presentation/customer/onboarding/splash_screen.dart';
-import '../../presentation/customer/onboarding/welcome_screen.dart';
 
 // Auth
 import '../../presentation/customer/auth/login_screen.dart';
@@ -30,10 +29,6 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/',
       builder: (context, state) => const SplashScreen(),
-    ),
-    GoRoute(
-      path: '/welcome',
-      builder: (context, state) => const WelcomeScreen(),
     ),
     GoRoute(
       path: '/login',

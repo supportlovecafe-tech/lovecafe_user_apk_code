@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/providers/auth_provider.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
@@ -48,10 +49,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
       if (!mounted) return;
       context.go('/'); // go home
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
+        SnackBar(content: Text(error.toString().replaceAll('Exception: ', ''))),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -64,10 +70,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       await ref.read(authProvider.notifier).signInWithGoogle();
       if (!mounted) return;
       context.go('/'); // go home
+    } on AuthException catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.message)),
+      );
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
+        SnackBar(content: Text(error.toString().replaceAll('Exception: ', ''))),
       );
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -81,25 +92,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: colorScheme.onSurface, size: 20),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/login');
-            }
-          },
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 32.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 32.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
             const SizedBox(height: 12),
             Text(
               'CREATE ACCOUNT',
@@ -205,6 +203,24 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            Center(
+              child: TextButton(
+                onPressed: () => context.go('/login'),
+                child: RichText(
+                  text: TextSpan(
+                    text: "Already have an account? ",
+                    style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface.withValues(alpha: 0.5)),
+                    children: [
+                      TextSpan(
+                        text: 'SIGN IN',
+                        style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.w900, letterSpacing: 1),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             TextButton(
               onPressed: () {
                 ref.read(authProvider.notifier).loginAsGuest();
@@ -221,6 +237,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             const SizedBox(height: 32),
           ],
         ),
+      ),
       ),
     );
   }

@@ -149,7 +149,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> signInWithGoogle() async {
     final success = await _ref.read(authServiceProvider).signInWithGoogle();
     if (!success) {
-      throw 'Google sign-in failed or was canceled.';
+      throw 'Google sign-in was canceled.';
     }
   }
 

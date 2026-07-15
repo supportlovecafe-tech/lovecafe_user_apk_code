@@ -1,6 +1,5 @@
 import 'package:go_router/go_router.dart';
 import '../../presentation/customer/onboarding/splash_screen.dart';
-import '../../presentation/customer/onboarding/welcome_screen.dart';
 import '../../presentation/customer/auth/login_screen.dart';
 import '../../presentation/customer/auth/signup_screen.dart';
 import '../../presentation/customer/auth/forgot_password_screen.dart';
@@ -20,10 +19,6 @@ final customerRouter = GoRouter(
     GoRoute(
       path: '/',
       builder: (context, state) => const SplashScreen(),
-    ),
-    GoRoute(
-      path: '/welcome',
-      builder: (context, state) => const WelcomeScreen(),
     ),
     GoRoute(
       path: '/login',
