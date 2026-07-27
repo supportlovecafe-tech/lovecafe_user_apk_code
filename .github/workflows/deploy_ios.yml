@@ -36,9 +36,20 @@ jobs:
           ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
           EOF
 
-      - name: Build iOS IPA
+      - name: Build iOS Archive
         run: |
-          flutter build ipa --release --export-options-plist=ios/exportOptions.plist
+          flutter build ipa --release --no-codesign
+
+      - name: Export Signed IPA via App Store Connect API Key
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            -exportPath build/ios/ipa \
+            -exportOptionsPlist ios/exportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_KEY_ID }}.p8 \
+            -authenticationKeyID ${{ secrets.APP_STORE_CONNECT_KEY_ID }} \
+            -authenticationKeyIssuerID ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
 
       - name: Upload Build to TestFlight / App Store Connect
         uses: apple-actions/upload-testflight-build@v1
