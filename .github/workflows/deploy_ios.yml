@@ -29,12 +29,6 @@ jobs:
       - name: Install Flutter Dependencies
         run: flutter pub get
 
-      - name: Install CocoaPods Dependencies
-        run: |
-          cd ios
-          pod repo update || true
-          pod install || true
-
       - name: Setup App Store Connect Private Key
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
@@ -44,7 +38,7 @@ jobs:
 
       - name: Build iOS IPA
         run: |
-          flutter build ipa --release --export-options-plist=ios/exportOptions.plist --allow-provisioning-updates
+          flutter build ipa --release --export-options-plist=ios/exportOptions.plist
 
       - name: Upload Build to TestFlight / App Store Connect
         uses: apple-actions/upload-testflight-build@v1
