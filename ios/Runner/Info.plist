@@ -66,8 +66,6 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Love Cafe requires location access to find the nearest outlet and ensure accurate delivery.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Love Cafe needs camera access to let you upload your profile picture or scan cafe QR codes.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -76,5 +74,16 @@
 	<string>Love Cafe needs microphone access for customer support calls.</string>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>Love Cafe requires this permission to provide personalized offers and improve your app experience.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.507519544150-c5en0sun8b29n7vhas4bp8op3q159gl2</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

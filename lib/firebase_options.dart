@@ -57,22 +57,24 @@ class DefaultFirebaseOptions {
     projectId: 'lovecafe-d9766',
     storageBucket: 'lovecafe-d9766.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBARlP8M5lH3xRfmy5vUU0W92a72wgYx8s',
     appId: '1:507519544150:ios:555f368b381eba44e984f7',
     messagingSenderId: '507519544150',
     projectId: 'lovecafe-d9766',
     storageBucket: 'lovecafe-d9766.firebasestorage.app',
+    androidClientId: '507519544150-r2vev13nsuh9j5lf0p4psumpadcig5hg.apps.googleusercontent.com',
+    iosClientId: '507519544150-c5en0sun8b29n7vhas4bp8op3q159gl2.apps.googleusercontent.com',
     iosBundleId: 'in.org.lovecafe.customer',
   );
-
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyBARlP8M5lH3xRfmy5vUU0W92a72wgYx8s',
     appId: '1:507519544150:ios:17473d4b14764a1ee984f7',
     messagingSenderId: '507519544150',
     projectId: 'lovecafe-d9766',
     storageBucket: 'lovecafe-d9766.firebasestorage.app',
+    androidClientId: '507519544150-r2vev13nsuh9j5lf0p4psumpadcig5hg.apps.googleusercontent.com',
+    iosClientId: '507519544150-1jkcfca4sflvavsnlihkm5bidipupvrl.apps.googleusercontent.com',
     iosBundleId: 'com.example.cinemaEatsCustomer',
   );
 
