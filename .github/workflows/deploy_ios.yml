@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: macos-latest
+    runs-on: macos-14
 
     steps:
       - name: Checkout repository
@@ -29,6 +29,12 @@ jobs:
       - name: Install Flutter Dependencies
         run: flutter pub get
 
+      - name: Install CocoaPods
+        run: |
+          cd ios
+          pod repo update || true
+          pod install
+
       - name: Setup App Store Connect Private Key
         run: |
           mkdir -p ~/.appstoreconnect/private_keys
@@ -36,11 +42,21 @@ jobs:
           ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
           EOF
 
-      - name: Build iOS Archive
+      - name: Build Flutter iOS Release (No Codesign)
         run: |
-          flutter build ipa --release --no-codesign
+          flutter build ios --release --no-codesign
 
-      - name: Export Signed IPA via App Store Connect API Key
+      - name: Create Xcode Archive
+        run: |
+          xcodebuild archive \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Export Signed IPA with App Store Connect API Key
         run: |
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
