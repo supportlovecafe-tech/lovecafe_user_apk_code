@@ -15,6 +15,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _emailOrPhoneController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isPasswordVisible = false;
 
   Future<void> _signIn() async {
     final emailOrPhone = _emailOrPhoneController.text.trim();
@@ -32,7 +33,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       String email = emailOrPhone;
       if (!email.contains('@')) {
         final phone = emailOrPhone.replaceAll(RegExp(r'\D'), '');
-        email = '$phone@cinemaeats.local';
+        email = '$phone@lovecafe.local';
       }
 
       await ref.read(authProvider.notifier).signInWithEmail(email, password);
@@ -136,7 +137,19 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     controller: _passwordController,
                     hint: '••••••••',
                     icon: Icons.lock_outline_rounded,
-                    obscureText: true,
+                    obscureText: !_isPasswordVisible,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isPasswordVisible ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                        color: colorScheme.primary.withValues(alpha: 0.5),
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isPasswordVisible = !_isPasswordVisible;
+                        });
+                      },
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Align(
@@ -284,6 +297,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     required IconData icon,
     TextInputType? keyboardType,
     bool obscureText = false,
+    Widget? suffixIcon,
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -307,6 +321,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           decoration: InputDecoration(
             hintText: hint,
             prefixIcon: Icon(icon, size: 20, color: colorScheme.primary.withValues(alpha: 0.5)),
+            suffixIcon: suffixIcon,
             filled: true,
             fillColor: colorScheme.onSurface.withValues(alpha: 0.03),
             border: OutlineInputBorder(

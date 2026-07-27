@@ -10,6 +10,7 @@ import '../../../core/providers/theme_provider.dart';
 import '../../../core/providers/loyalty_provider.dart';
 import '../../shared/widgets/custom_bottom_nav_bar.dart';
 import '../loyalty/cinepoints_history_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -59,6 +60,48 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
+  Future<void> _launchURL(String urlString) async {
+    final Uri url = Uri.parse(urlString);
+    try {
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not open link')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open link')),
+        );
+      }
+    }
+  }
+
+  Future<void> _launchEmail(String emailAddress) async {
+    final Uri emailUri = Uri(
+      scheme: 'mailto',
+      path: emailAddress,
+      query: 'subject=Love%20Cafe%20App%20Support',
+    );
+    try {
+      if (!await launchUrl(emailUri)) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not open email client')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not open email client')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -98,10 +141,45 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     _buildSectionHeader(context, 'SUPPORT & SETTINGS'),
                     _buildMenuTile(
                       context,
-                      icon: Icons.help_outline_rounded,
-                      title: 'Help Center',
-                      subtitle: 'Concierge help and assistance',
-                      onTap: () => _showComingSoon(context, 'Support'),
+                      icon: Icons.headset_mic_rounded,
+                      title: 'Support',
+                      subtitle: 'Contact us via Email or Phone',
+                      onTap: () => _showSupportOptions(context),
+                    ),
+                    _buildMenuTile(
+                      context,
+                      icon: Icons.rate_review_rounded,
+                      title: 'Rate Us',
+                      subtitle: 'Love the app? Leave a review!',
+                      onTap: () {
+                        _launchURL('market://details?id=in.org.lovecafe.customer').catchError((_) {
+                          _launchURL('https://play.google.com/store/apps/details?id=in.org.lovecafe.customer');
+                        });
+                      },
+                    ),
+                    _buildMenuTile(
+                      context,
+                      icon: Icons.feedback_rounded,
+                      title: 'Give Feedback',
+                      subtitle: 'Tell us how we can improve',
+                      onTap: () => _launchEmail('support.lovecafe@gmail.com'),
+                    ),
+
+                    const SizedBox(height: 32),
+                    _buildSectionHeader(context, 'LEGAL'),
+                    _buildMenuTile(
+                      context,
+                      icon: Icons.privacy_tip_rounded,
+                      title: 'Privacy Policy',
+                      subtitle: 'How we protect your data',
+                      onTap: () => _launchURL('https://supportlovecafe-tech.github.io/lovecafe-legal/PRIVACY_POLICY'),
+                    ),
+                    _buildMenuTile(
+                      context,
+                      icon: Icons.description_rounded,
+                      title: 'Terms & Conditions',
+                      subtitle: 'Rules and guidelines',
+                      onTap: () => _launchURL('https://supportlovecafe-tech.github.io/lovecafe-legal/TERMS_AND_CONDITIONS'),
                     ),
                   ],
                   const SizedBox(height: 48),
@@ -373,7 +451,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
             debugPrint('Logout error (non-fatal): $e');
           } finally {
             if (context.mounted) {
-              context.go('/welcome');
+              context.go('/login');
             }
           }
         },
@@ -408,6 +486,46 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           const SizedBox(height: 40),
           ElevatedButton(onPressed: () => Navigator.pop(context), style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(64), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))), child: const Text('GOT IT')),
         ]),
+      ),
+    );
+  }
+
+  void _showSupportOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surfaceElevated,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Contact Support', style: AppTextStyles.headingSmall),
+              const SizedBox(height: 24),
+              ListTile(
+                leading: Icon(Icons.email_rounded, color: AppColors.primary),
+                title: Text('Email Us', style: AppTextStyles.titleMedium),
+                subtitle: Text('support.lovecafe@gmail.com', style: AppTextStyles.bodySmall),
+                onTap: () {
+                  Navigator.pop(context);
+                  _launchEmail('support.lovecafe@gmail.com');
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.phone_rounded, color: AppColors.primary),
+                title: Text('Call Us', style: AppTextStyles.titleMedium),
+                subtitle: Text('+91 94333 56006', style: AppTextStyles.bodySmall),
+                onTap: () {
+                  Navigator.pop(context);
+                  _launchURL('tel:+919433356006');
+                },
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

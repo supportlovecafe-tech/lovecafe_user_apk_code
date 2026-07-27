@@ -171,7 +171,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     };
     
     // If it's a proxy email, extract the phone number
-    if (email.endsWith('@cinemaeats.local')) {
+    if (email.endsWith('@lovecafe.local')) {
       data['phone'] = email.split('@')[0];
     } else {
       data['email'] = email.trim(); // store real email in profile

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
-/// Cinema Eats — Typography System
+/// Love Cafe — Typography System
 /// Poppins for headings/prices (personality & weight)
 /// Inter for body/labels (readability & precision)
 class AppTextStyles {

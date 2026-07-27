@@ -70,9 +70,9 @@ class AuthService {
 
   Future<bool> signInWithGoogle() async {
     // TODO: Replace with your actual Web Client ID from Google Cloud Console
-      const webClientId = '997876784016-gsksgjan5jmu0d6g2na1t3h15s0r2r4f.apps.googleusercontent.com';
+      const webClientId = '507519544150-hvfj5iga0sinfv7t9j6oqqvhcggjrn8d.apps.googleusercontent.com';
     // TODO: Replace with your actual iOS Client ID from Google Cloud Console (if supporting iOS)
-    const iosClientId = '997876784016-7qpmk4bl6oatmq8ed8tud0fl4ds07tkr.apps.googleusercontent.com';
+    const iosClientId = '507519544150-1jkcfca4sflvavsnlihkm5bidipupvrl.apps.googleusercontent.com';
 
     try {
       String? platformClientId;

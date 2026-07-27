@@ -1,4 +1,4 @@
-// Cinema Eats Database Schema Definitions
+// Love Cafe Database Schema Definitions
 
 class DatabaseTables {
   static const String cinemas = 'cinemas';

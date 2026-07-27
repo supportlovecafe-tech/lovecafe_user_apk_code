@@ -15,7 +15,7 @@ enum FoodCardMode {
   compact,
 }
 
-/// Cinema Eats — Premium Food Item Card
+/// Love Cafe — Premium Food Item Card
 ///
 /// [list] mode: reference design — horizontal row with thumbnail on the right,
 ///   name/description/price on the left, + button on the far right.
@@ -250,6 +250,7 @@ class _FoodItemCardState extends State<FoodItemCard>
     return GestureDetector(
       onTap: widget.onTap,
       child: Container(
+        width: 160,
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(18),

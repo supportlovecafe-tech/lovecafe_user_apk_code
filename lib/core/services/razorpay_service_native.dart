@@ -22,7 +22,7 @@ class RazorpayService {
     _razorpay.open({
       'key': keyId,
       'amount': amountInPaise,
-      'name': 'Cinema Eats',
+      'name': 'Love Cafe',
       'description': 'Movie food order',
       'prefill': {
         'contact': customerPhone,

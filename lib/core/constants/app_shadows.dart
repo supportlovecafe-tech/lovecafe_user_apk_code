@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Cinema Eats — Shadow Token Library
+/// Love Cafe — Shadow Token Library
 /// Consistent depth/glow system across the entire app.
 class AppShadows {
   // ═══════════════════════════════════════════

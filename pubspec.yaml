@@ -2,7 +2,7 @@ name: cinema_eats_customer
 description: "Cinema Food Ordering App"
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 1.0.2+3
 
 environment:
   sdk: '>=3.3.0 <4.0.0'
@@ -47,6 +47,8 @@ dependencies:
   google_fonts: ^6.1.0
   flutter_svg: ^2.0.9
   video_player: ^2.11.1
+  url_launcher: ^6.3.2
+  app_tracking_transparency: ^2.0.7
 
 dev_dependencies:
   flutter_test:
@@ -58,9 +60,9 @@ flutter_launcher_icons:
   android: true
   ios: true
   remove_alpha_ios: true
-  image_path: "assets/app_icon.jpeg"
+  image_path: "assets/app_icon.png"
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/app_icon.jpeg"
+  adaptive_icon_foreground: "assets/app_icon.png"
 
 flutter:
   uses-material-design: true
@@ -72,4 +74,4 @@ flutter:
     - assets/lottie/
     - assets/icons/
     - assets/logo_transparent.png
-    - assets/app_icon.jpg
+    - assets/app_icon.png

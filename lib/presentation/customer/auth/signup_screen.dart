@@ -37,7 +37,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       // If it's a phone number (doesn't contain '@'), convert to proxy email for auth
       if (!email.contains('@')) {
         final phone = emailOrPhone.replaceAll(RegExp(r'\D'), '');
-        email = '$phone@cinemaeats.local';
+        email = '$phone@lovecafe.local';
       }
 
       await ref.read(authProvider.notifier).signUpWithEmail(

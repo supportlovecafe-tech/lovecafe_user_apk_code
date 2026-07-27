@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Cinema Eats — Luxury Dark Color System
+/// Love Cafe — Luxury Dark Color System
 /// Palette: OLED Black + Hot Pink + Purple + VIP Gold
 class AppColors {
   // ═══════════════════════════════════════════

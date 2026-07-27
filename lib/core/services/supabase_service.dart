@@ -122,23 +122,29 @@ class SupabaseService {
     }
 
     try {
-      print('Calling Secure RPC directly on Supabase (Bypassing Backend API)...');
+      print('Calling Next.js Backend API for secure order placement...');
       
-      final String orderId = await _client.rpc('place_order_secure', params: {
-        'p_cinema_id': cinemaId,
-        'p_display_id': displayId,
-        'p_items': items,
-        'p_total_amount': totalAmount,
-        'p_location': "APK, $location",
-        'p_customer_phone': customerPhone,
-        'p_payment_method': paymentMethod.name,
-        'p_customer_profile_id': customerProfileId,
-      });
+      final token = _client.auth.currentSession?.accessToken;
+
+      final response = await _dio.post(
+        '/api/orders/create',
+        data: orderData,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'x-idempotency-key': clientUuid ?? DateTime.now().toIso8601String(),
+          },
+        ),
+      );
       
-      print('Direct RPC Order Success: $orderId');
-      return orderId;
+      if (response.data['success'] == true) {
+         print('API Order Success: ${response.data['id']}');
+         return response.data['id'].toString();
+      } else {
+         throw Exception(response.data['error'] ?? 'Order failed via API');
+      }
     } catch (e) {
-      print('SupabaseService.placeOrder RPC ERROR: $e');
+      print('SupabaseService.placeOrder API ERROR: $e');
       rethrow;
     }
   }

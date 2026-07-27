@@ -7,7 +7,7 @@ import '../../../../core/constants/app_text_styles.dart';
 import '../../../../core/providers/cart_provider.dart';
 import 'package:go_router/go_router.dart';
 
-/// Cinema Eats — Floating Glassmorphism Bottom Navigation
+/// Love Cafe — Floating Glassmorphism Bottom Navigation
 /// Floating pill shape with blur backdrop + pink active indicator.
 class CustomBottomNavBar extends ConsumerWidget {
   final int currentIndex;

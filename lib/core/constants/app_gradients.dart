@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-/// Cinema Eats — Gradient Token Library
+/// Love Cafe — Gradient Token Library
 /// All gradients used across the app defined in one place for consistency.
 class AppGradients {
   // ═══════════════════════════════════════════

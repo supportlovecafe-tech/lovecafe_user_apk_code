@@ -41,7 +41,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         _phoneController.text = auth.phone!;
       } else if (auth.email != null && !auth.email!.contains('@')) {
         // Handle proxy email that is actually a phone number
-        _phoneController.text = auth.email!.replaceAll('@cinemaeats.local', '');
+        _phoneController.text = auth.email!.replaceAll('@lovecafe.local', '');
       }
     });
   }

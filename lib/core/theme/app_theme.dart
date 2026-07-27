@@ -4,10 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../constants/app_colors.dart';
 import '../constants/app_text_styles.dart';
 
-/// Cinema Eats — Centralized Design System
+/// Love Cafe — Centralized Design System
 /// Single source of truth for all Material ThemeData.
 /// Both light and dark return the same luxury dark theme
-/// because Cinema Eats is OLED-first by design.
+/// because Love Cafe is OLED-first by design.
 class AppTheme {
   // ─────────────────────────────────────────
   // COLOR SCHEME
@@ -280,7 +280,7 @@ class AppTheme {
         focusColor: AppColors.primary.withValues(alpha: 0.12),
       );
 
-  /// Cinema Eats forces dark (OLED-first)
+  /// Love Cafe forces dark (OLED-first)
   static ThemeData get darkTheme => _theme;
   static ThemeData get lightTheme => _theme;
 }

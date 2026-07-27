@@ -12,7 +12,20 @@
           "package_name": "in.org.lovecafe.customer"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "507519544150-r2vev13nsuh9j5lf0p4psumpadcig5hg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "in.org.lovecafe.customer",
+            "certificate_hash": "2505b4c8de428f014206d7fbbf58feb9af4317ef"
+          }
+        },
+        {
+          "client_id": "507519544150-hvfj5iga0sinfv7t9j6oqqvhcggjrn8d.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAprDrr0gzPx8nCr2YvOd6Z5eWtgMGa4_8"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "507519544150-hvfj5iga0sinfv7t9j6oqqvhcggjrn8d.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "507519544150-1jkcfca4sflvavsnlihkm5bidipupvrl.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.cinemaEatsCustomer"
+              }
+            }
+          ]
         }
       }
     }

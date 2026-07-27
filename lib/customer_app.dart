@@ -4,15 +4,15 @@ import 'core/theme/app_theme.dart';
 import 'core/router/customer_router.dart';
 import 'core/providers/theme_provider.dart';
 
-class CinemaEatsCustomerApp extends ConsumerWidget {
-  const CinemaEatsCustomerApp({super.key});
+class LoveCafeCustomerApp extends ConsumerWidget {
+  const LoveCafeCustomerApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final themeMode = ref.watch(themeProvider);
     
     return MaterialApp.router(
-      title: 'CinemaEats Consumer',
+      title: 'LoveCafe Consumer',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: themeMode,

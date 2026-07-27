@@ -4,7 +4,7 @@ import '../../../core/constants/app_gradients.dart';
 import '../../../core/constants/app_shadows.dart';
 import '../../../core/constants/app_text_styles.dart';
 
-/// Cinema Eats — Premium Gradient Primary Button
+/// Love Cafe — Premium Gradient Primary Button
 /// Gradient: Hot Pink → Dark Pink → Deep Violet
 /// Includes soft pink glow shadow on press.
 class PrimaryButton extends StatefulWidget {
