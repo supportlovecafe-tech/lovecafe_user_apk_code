@@ -26,6 +26,9 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Disable Swift Package Manager (Force CocoaPods for Firebase)
+        run: flutter config --no-enable-swift-package-manager
+
       - name: Install Flutter Dependencies
         run: flutter pub get
 
