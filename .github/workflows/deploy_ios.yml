@@ -75,10 +75,13 @@ jobs:
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
           cp $PP_PATH ~/Library/MobileDevice/Provisioning\ Profiles
 
-          # extract profile UUID and update exportOptions.plist
+          # extract profile UUID and Team ID and update exportOptions.plist
           UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i $PP_PATH))
+          TEAM_ID=$(/usr/libexec/PlistBuddy -c "Print TeamIdentifier:0" /dev/stdin <<< $(security cms -D -i $PP_PATH))
           sed -i '' "s/REPLACE_ME_PROFILE_UUID/$UUID/g" ios/exportOptions.plist
+          sed -i '' "s/B6DR5MUJB2/$TEAM_ID/g" ios/exportOptions.plist
           echo "PROFILE_UUID=$UUID" >> $GITHUB_ENV
+          echo "TEAM_ID=$TEAM_ID" >> $GITHUB_ENV
 
       - name: Build Flutter iOS Release (No Codesign)
         run: |
@@ -92,7 +95,7 @@ jobs:
             -configuration Release \
             -archivePath build/ios/archive/Runner.xcarchive \
             CODE_SIGN_STYLE="Manual" \
-            DEVELOPMENT_TEAM="B6DR5MUJB2" \
+            DEVELOPMENT_TEAM="${{ env.TEAM_ID }}" \
             PROVISIONING_PROFILE_SPECIFIER="${{ env.PROFILE_UUID }}" \
             CODE_SIGN_IDENTITY="Apple Distribution"
 
