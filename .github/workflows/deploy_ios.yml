@@ -78,6 +78,7 @@ jobs:
           # extract profile UUID and update exportOptions.plist
           UUID=$(/usr/libexec/PlistBuddy -c "Print UUID" /dev/stdin <<< $(security cms -D -i $PP_PATH))
           sed -i '' "s/REPLACE_ME_PROFILE_UUID/$UUID/g" ios/exportOptions.plist
+          echo "PROFILE_UUID=$UUID" >> $GITHUB_ENV
 
       - name: Build Flutter iOS Release (No Codesign)
         run: |
@@ -89,7 +90,10 @@ jobs:
             -workspace ios/Runner.xcworkspace \
             -scheme Runner \
             -configuration Release \
-            -archivePath build/ios/archive/Runner.xcarchive
+            -archivePath build/ios/archive/Runner.xcarchive \
+            CODE_SIGN_STYLE="Manual" \
+            PROVISIONING_PROFILE_SPECIFIER="${{ env.PROFILE_UUID }}" \
+            CODE_SIGN_IDENTITY="Apple Distribution"
 
       - name: Export Signed IPA with App Store Connect API Key
         run: |
