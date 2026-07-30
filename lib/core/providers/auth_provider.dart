@@ -257,6 +257,26 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _persistState();
   }
 
+  Future<void> deleteAccount() async {
+    await _ref.read(authServiceProvider).deleteAccount();
+    
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    
+    state = AuthState.unauthenticated();
+    
+    _ref.invalidate(cartProvider);
+    _ref.invalidate(seatSelectionProvider);
+    _ref.invalidate(ordersProvider);
+    _ref.invalidate(loyaltyProvider);
+    _ref.invalidate(notificationProvider);
+    _ref.invalidate(menuProvider);
+    _ref.invalidate(comboProvider);
+    _ref.invalidate(reorderProvider);
+    
+    _persistState();
+  }
+
   Future<void> logout() async {
     await _ref.read(authServiceProvider).signOut();
     
