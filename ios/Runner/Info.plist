@@ -74,6 +74,8 @@
 	<string>Love Cafe needs microphone access for customer support calls.</string>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>Love Cafe requires this permission to provide personalized offers and improve your app experience.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
