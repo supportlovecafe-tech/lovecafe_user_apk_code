@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
@@ -165,8 +166,12 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
               shape: BoxShape.circle,
             ),
             child: Icon(
-                isActive ? Icons.receipt_long_rounded : Icons.history_rounded,
-                size: 72, color: AppColors.primary.withValues(alpha: 0.35)),
+                    isActive ? Icons.receipt_long_rounded : Icons.history_rounded,
+                    size: 72,
+                    color: AppColors.primary.withValues(alpha: 0.35))
+                .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                .moveY(begin: -5, end: 5, duration: 2000.ms, curve: Curves.easeInOut)
+                .scale(begin: const Offset(0.95, 0.95), end: const Offset(1.05, 1.05), duration: 2000.ms, curve: Curves.easeInOut),
           ),
           const SizedBox(height: 28),
           Text(isActive ? 'No active orders' : 'No past orders',

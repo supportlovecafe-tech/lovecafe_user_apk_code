@@ -181,6 +181,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       subtitle: 'Rules and guidelines',
                       onTap: () => _launchURL('https://supportlovecafe-tech.github.io/lovecafe-legal/TERMS_AND_CONDITIONS'),
                     ),
+                    const SizedBox(height: 32),
+                    _buildSectionHeader(context, 'ACCOUNT MANAGEMENT'),
+                    _buildMenuTile(
+                      context,
+                      icon: Icons.delete_forever_rounded,
+                      title: 'Delete Account',
+                      subtitle: 'Permanently remove your account and data',
+                      onTap: () => _showDeleteAccountConfirmation(context, ref),
+                    ),
                   ],
                   const SizedBox(height: 48),
                   _buildLogoutButton(context, theme, colorScheme, ref),
@@ -466,6 +475,75 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               borderRadius: BorderRadius.circular(16)),
         ),
       ),
+    );
+  }
+
+  void _showDeleteAccountConfirmation(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        bool isDeleting = false;
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: AppColors.surfaceElevated,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              title: Row(
+                children: [
+                  Icon(Icons.warning_amber_rounded, color: AppColors.error),
+                  const SizedBox(width: 8),
+                  Text('Delete Account', style: AppTextStyles.titleMedium),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'This action cannot be undone. All your data, orders, and cinepoints will be permanently deleted.',
+                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textDisabled),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isDeleting ? null : () => Navigator.pop(context),
+                  child: Text('Cancel', style: TextStyle(color: AppColors.textDisabled)),
+                ),
+                ElevatedButton(
+                  onPressed: isDeleting
+                      ? null
+                      : () async {
+                          setDialogState(() => isDeleting = true);
+                          try {
+                            await ref.read(authProvider.notifier).deleteAccount();
+                            if (context.mounted) {
+                              Navigator.pop(context); // close dialog
+                              context.go('/login');
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              setDialogState(() => isDeleting = false);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(e.toString().replaceAll('Exception: ', ''))),
+                              );
+                            }
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.error.withValues(alpha: 0.1),
+                    foregroundColor: AppColors.error,
+                    elevation: 0,
+                  ),
+                  child: isDeleting
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : const Text('Yes, Delete Account'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 

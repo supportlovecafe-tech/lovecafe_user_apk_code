@@ -12,24 +12,28 @@ class SignupScreen extends ConsumerStatefulWidget {
 }
 
 class _SignupScreenState extends ConsumerState<SignupScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _emailOrPhoneController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _acceptedTerms = false;
 
   Future<void> _signUp() async {
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
+    if (!_acceptedTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please accept the Terms & Privacy Policy to continue')),
+      );
+      return;
+    }
     final firstName = _firstNameController.text.trim();
     final lastName = _lastNameController.text.trim();
     final emailOrPhone = _emailOrPhoneController.text.trim();
     final password = _passwordController.text.trim();
-
-    if (firstName.isEmpty || lastName.isEmpty || emailOrPhone.isEmpty || password.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill all required fields')),
-      );
-      return;
-    }
 
     setState(() => _isLoading = true);
     try {
@@ -65,6 +69,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   Future<void> _signUpWithGoogle() async {
+    if (!_acceptedTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please accept the Terms & Privacy Policy to continue')),
+      );
+      return;
+    }
     setState(() => _isLoading = true);
     try {
       await ref.read(authProvider.notifier).signInWithGoogle();
@@ -121,38 +131,81 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 borderRadius: BorderRadius.circular(32),
                 border: Border.all(color: colorScheme.outline.withValues(alpha: 0.1)),
               ),
-              child: Column(
-                children: [
-                  _buildInputField(
-                    label: 'FIRST NAME',
-                    controller: _firstNameController,
-                    hint: 'John',
-                    icon: Icons.person_outline_rounded,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildInputField(
-                    label: 'LAST NAME',
-                    controller: _lastNameController,
-                    hint: 'Doe',
-                    icon: Icons.person_outline_rounded,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildInputField(
-                    label: 'EMAIL OR PHONE',
-                    controller: _emailOrPhoneController,
-                    hint: 'user@example.com or 9876543210',
-                    icon: Icons.contact_mail_rounded,
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildInputField(
-                    label: 'PASSWORD',
-                    controller: _passwordController,
-                    hint: '••••••••',
-                    icon: Icons.lock_outline_rounded,
-                    obscureText: true,
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    _buildInputField(
+                      label: 'FIRST NAME',
+                      controller: _firstNameController,
+                      hint: 'John',
+                      icon: Icons.person_outline_rounded,
+                      validator: (value) => value == null || value.trim().isEmpty ? 'Please enter your first name' : null,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildInputField(
+                      label: 'LAST NAME',
+                      controller: _lastNameController,
+                      hint: 'Doe',
+                      icon: Icons.person_outline_rounded,
+                      validator: (value) => value == null || value.trim().isEmpty ? 'Please enter your last name' : null,
+                    ),
+                    const SizedBox(height: 20),
+                    _buildInputField(
+                      label: 'EMAIL OR PHONE',
+                      controller: _emailOrPhoneController,
+                      hint: 'user@example.com or 9876543210',
+                      icon: Icons.contact_mail_rounded,
+                      keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) return 'Please enter email or phone';
+                        final isEmail = value.contains('@');
+                        if (isEmail) {
+                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                            return 'Please enter a valid email';
+                          }
+                        } else {
+                          if (!RegExp(r'^\d{10}$').hasMatch(value.trim())) {
+                            return 'Please enter a valid 10-digit phone number';
+                          }
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    _buildInputField(
+                      label: 'PASSWORD',
+                      controller: _passwordController,
+                      hint: '••••••••',
+                      icon: Icons.lock_outline_rounded,
+                      obscureText: true,
+                      validator: (value) => value == null || value.length < 6 ? 'Password must be at least 6 characters' : null,
+                    ),
+                    const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _acceptedTerms,
+                        onChanged: (value) {
+                          setState(() {
+                            _acceptedTerms = value ?? false;
+                          });
+                        },
+                        activeColor: colorScheme.primary,
+                      ),
+                      Expanded(
+                        child: Text(
+                          'I accept the Terms & Conditions and Privacy Policy',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                        ),
+                      ),
+                    ],
+                    ],
                   ),
                 ],
+              ),
               ),
             ),
             const SizedBox(height: 32),
@@ -185,20 +238,36 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               ],
             ),
             const SizedBox(height: 24),
-            OutlinedButton.icon(
+            ElevatedButton.icon(
               onPressed: _isLoading ? null : _signUpWithGoogle,
-              icon: Icon(Icons.g_mobiledata_rounded, size: 32, color: colorScheme.onSurface),
-              label: const Text('GOOGLE ACCOUNT'),
-              style: OutlinedButton.styleFrom(
+              icon: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  'G',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.blue.shade600,
+                  ),
+                ),
+              ),
+              label: const Text('Sign in with Google'),
+              style: ElevatedButton.styleFrom(
                 minimumSize: const Size.fromHeight(72),
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black87,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
+                  side: BorderSide(color: Colors.grey.shade300),
                 ),
-                side: BorderSide(color: colorScheme.outline.withValues(alpha: 0.1)),
-                foregroundColor: colorScheme.onSurface,
+                elevation: 0,
                 textStyle: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
                 ),
               ),
             ),
@@ -249,6 +318,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     required IconData icon,
     TextInputType? keyboardType,
     bool obscureText = false,
+    String? Function(String?)? validator,
   }) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
@@ -265,10 +335,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        TextField(
+        TextFormField(
           controller: controller,
           keyboardType: keyboardType,
           obscureText: obscureText,
+          validator: validator,
+          autovalidateMode: AutovalidateMode.onUserInteraction,
           style: const TextStyle(fontWeight: FontWeight.bold),
           decoration: InputDecoration(
             hintText: hint,

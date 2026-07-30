@@ -68,6 +68,16 @@ class AuthService {
     await client.auth.signOut();
   }
 
+  Future<void> deleteAccount() async {
+    try {
+      await client.rpc('delete_user_account');
+      await signOut();
+    } catch (e) {
+      print('Delete account error: $e');
+      throw Exception('Failed to delete account. Please try again or contact support.');
+    }
+  }
+
   Future<bool> signInWithGoogle() async {
     // TODO: Replace with your actual Web Client ID from Google Cloud Console
       const webClientId = '507519544150-hvfj5iga0sinfv7t9j6oqqvhcggjrn8d.apps.googleusercontent.com';

@@ -233,20 +233,48 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               ],
             ),
             const SizedBox(height: 24),
-            OutlinedButton.icon(
+            ElevatedButton.icon(
               onPressed: _isLoading ? null : _signInWithGoogle,
-              icon: Icon(Icons.g_mobiledata_rounded, size: 32, color: colorScheme.onSurface),
-              label: const Text('GOOGLE ACCOUNT'),
-              style: OutlinedButton.styleFrom(
+              icon: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: Text(
+                  'G',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.blue.shade600,
+                  ),
+                ),
+              ),
+              label: const Text('Sign in with Google'),
+              style: ElevatedButton.styleFrom(
                 minimumSize: const Size.fromHeight(72),
+                backgroundColor: Colors.white,
+                foregroundColor: Colors.black87,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(24),
+                  side: BorderSide(color: Colors.grey.shade300),
                 ),
-                side: BorderSide(color: colorScheme.outline.withValues(alpha: 0.1)),
-                foregroundColor: colorScheme.onSurface,
+                elevation: 0,
                 textStyle: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Text(
+                'By continuing with Google, you agree to our Terms & Conditions and Privacy Policy.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                  fontSize: 10,
                 ),
               ),
             ),

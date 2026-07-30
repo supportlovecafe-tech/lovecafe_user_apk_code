@@ -28,6 +28,9 @@ We use administrative, technical, and physical security measures to help protect
 ## 6. Your Rights
 You may review, change, or terminate your account at any time. If you wish to delete your account or request data deletion, please contact us at support.lovecafe@gmail.com.
 
-## 7. Contact Us
+## 7. Data Retention
+We will retain your personal information only for as long as is necessary for the purposes set out in this Privacy Policy, or as long as your account is active. When we have no ongoing legitimate business need to process your personal information, we will either delete or anonymize it. If you request account deletion, we will delete your data within 30 days, except for transaction records which we may retain for up to 1 year for legal and tax compliance purposes.
+
+## 8. Contact Us
 If you have questions or comments about this Privacy Policy, please contact us at:
 **Email:** support.lovecafe@gmail.com

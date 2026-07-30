@@ -78,7 +78,10 @@ class CartScreen extends ConsumerWidget {
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.shopping_bag_outlined,
-                  size: 72, color: AppColors.primary.withValues(alpha: 0.35)),
+                      size: 72, color: AppColors.primary.withValues(alpha: 0.35))
+                  .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                  .moveY(begin: -5, end: 5, duration: 2000.ms, curve: Curves.easeInOut)
+                  .scale(begin: const Offset(0.95, 0.95), end: const Offset(1.05, 1.05), duration: 2000.ms, curve: Curves.easeInOut),
             ),
             const SizedBox(height: 28),
             Text('Your cart is empty',

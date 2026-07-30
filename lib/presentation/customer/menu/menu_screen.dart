@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/constants/app_shadows.dart';
@@ -1180,6 +1181,31 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
   }
 
   Widget _buildShimmerGrid(BuildContext context) {
-    return const SliverToBoxAdapter(child: Center(child: CircularProgressIndicator()));
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2,
+          crossAxisSpacing: 16,
+          mainAxisSpacing: 16,
+          childAspectRatio: 0.65,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            return Shimmer.fromColors(
+              baseColor: AppColors.surfaceElevated,
+              highlightColor: AppColors.surfaceElevated.withValues(alpha: 0.5),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+              ),
+            );
+          },
+          childCount: 6,
+        ),
+      ),
+    );
   }
 }
