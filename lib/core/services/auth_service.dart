@@ -72,7 +72,7 @@ class AuthService {
     // TODO: Replace with your actual Web Client ID from Google Cloud Console
       const webClientId = '507519544150-hvfj5iga0sinfv7t9j6oqqvhcggjrn8d.apps.googleusercontent.com';
     // TODO: Replace with your actual iOS Client ID from Google Cloud Console (if supporting iOS)
-    const iosClientId = '507519544150-1jkcfca4sflvavsnlihkm5bidipupvrl.apps.googleusercontent.com';
+    const iosClientId = '507519544150-c5en0sun8b29n7vhas4bp8op3q159gl2.apps.googleusercontent.com';
 
     try {
       String? platformClientId;
