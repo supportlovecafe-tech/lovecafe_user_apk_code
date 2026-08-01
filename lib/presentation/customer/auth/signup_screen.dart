@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/providers/auth_provider.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
@@ -19,6 +21,36 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _acceptedTerms = false;
+  
+  late final TapGestureRecognizer _termsRecognizer;
+  late final TapGestureRecognizer _privacyRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    _termsRecognizer = TapGestureRecognizer()
+      ..onTap = () => _launchURL('https://supportlovecafe-tech.github.io/lovecafe-legal/TERMS_AND_CONDITIONS');
+    _privacyRecognizer = TapGestureRecognizer()
+      ..onTap = () => _launchURL('https://supportlovecafe-tech.github.io/lovecafe-legal/PRIVACY_POLICY');
+  }
+
+  @override
+  void dispose() {
+    _termsRecognizer.dispose();
+    _privacyRecognizer.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    _emailOrPhoneController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _launchURL(String urlString) async {
+    final url = Uri.parse(urlString);
+    if (await canLaunchUrl(url)) {
+      await launchUrl(url);
+    }
+  }
 
   Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) {
@@ -209,11 +241,38 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                             activeColor: colorScheme.primary,
                           ),
                           Expanded(
-                            child: Text(
-                              'I accept the Terms & Conditions and Privacy Policy',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurface
-                                    .withValues(alpha: 0.7),
+                            child: RichText(
+                              text: TextSpan(
+                                text: 'I accept the ',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: colorScheme.onSurface.withValues(alpha: 0.7),
+                                ),
+                                children: [
+                                  TextSpan(
+                                    text: 'Terms & Conditions',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                    recognizer: _termsRecognizer,
+                                  ),
+                                  TextSpan(
+                                    text: ' and ',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.onSurface.withValues(alpha: 0.7),
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: 'Privacy Policy',
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: colorScheme.primary,
+                                      fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                    recognizer: _privacyRecognizer,
+                                  ),
+                                ],
                               ),
                             ),
                           ),
