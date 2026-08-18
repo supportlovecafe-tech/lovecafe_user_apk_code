@@ -426,7 +426,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       BuildContext context, List<Map<String, dynamic>> offers) {
     final defaultBanner = {
       'title': 'Movies + Food\n= Perfect Night',
-      'description': 'Order gourmet cinema food directly to your seat.',
+      'description': 'Order Love cafe food directly to your seat.',
       'banner_url': null,
       'category': 'CINEMA',
     };
@@ -460,7 +460,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildHeroBannerCard(
       BuildContext context, Map<String, dynamic> offer) {
-    final String title = offer['title'] as String? ?? 'Gourmet Cinema Food';
+    final String title = offer['title'] as String? ?? 'Love cafe Food';
     final String description =
         offer['description'] as String? ?? 'Delivered right to your seat.';
     final String? bannerUrl = offer['banner_url'] as String?;
@@ -710,6 +710,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
         child: Container(
+          clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: AppColors.surfaceElevated.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(100),
@@ -759,6 +760,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildRewardsBanner(BuildContext context) {
     final loyalty = ref.watch(loyaltyProvider);
+    if (!loyalty.isCinepointsEnabled) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
     return SliverToBoxAdapter(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),

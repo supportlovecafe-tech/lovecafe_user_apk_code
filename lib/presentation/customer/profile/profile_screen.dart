@@ -379,19 +379,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     final loyalty = ref.watch(loyaltyProvider);
     return Row(children: [
       _buildStatCard(context, 'SCREENINGS', '42', Icons.stars_rounded), 
-      const SizedBox(width: 16), 
-      Expanded(
-        child: InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const CinePointsHistoryScreen()),
-            );
-          },
-          borderRadius: BorderRadius.circular(32),
-          child: _buildStatCard(context, 'CINEPOINTS', loyalty.availablePoints.toString(), Icons.auto_awesome_rounded, isExpanded: false),
+      if (loyalty.isCinepointsEnabled) ...[
+        const SizedBox(width: 16), 
+        Expanded(
+          child: InkWell(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const CinePointsHistoryScreen()),
+              );
+            },
+            borderRadius: BorderRadius.circular(32),
+            child: _buildStatCard(context, 'CINEPOINTS', loyalty.availablePoints.toString(), Icons.auto_awesome_rounded, isExpanded: false),
+          ),
         ),
-      ),
+      ]
     ]);
   }
 

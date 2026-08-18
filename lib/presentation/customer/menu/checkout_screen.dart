@@ -127,7 +127,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                ),
             const SizedBox(height: 32),
 
-            if (auth.status == AuthStatus.AUTHENTICATED) ...[
+            if (auth.status == AuthStatus.AUTHENTICATED && loyalty.isCinepointsEnabled) ...[
               _buildSectionTitle('Loyalty Rewards'),
               _buildLoyaltyCard(loyalty, _useLoyaltyPoints, (val) => setState(() => _useLoyaltyPoints = val), actualRedeemValue),
               const SizedBox(height: 32),

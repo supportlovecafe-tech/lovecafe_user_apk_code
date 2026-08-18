@@ -129,7 +129,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Welcome back to the ultimate cinematic gourmet experience.',
+              'Welcome back to the ultimate Love cafe experience.',
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: colorScheme.onSurface.withValues(alpha: 0.6),
                 height: 1.5,

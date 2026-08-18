@@ -266,6 +266,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
           children: [
             Expanded(
               child: Container(
+                clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
                   color: AppColors.surfaceElevated.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(100),

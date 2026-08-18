@@ -11,6 +11,7 @@ class LoyaltyState {
   final int totalRedeemed;
   final List<LoyaltyTransaction> transactions;
   final bool isLoading;
+  final bool isCinepointsEnabled;
 
   LoyaltyState({
     this.availablePoints = 0,
@@ -19,6 +20,7 @@ class LoyaltyState {
     this.totalRedeemed = 0,
     this.transactions = const [],
     this.isLoading = false,
+    this.isCinepointsEnabled = true,
   });
 
   LoyaltyState copyWith({
@@ -28,6 +30,7 @@ class LoyaltyState {
     int? totalRedeemed,
     List<LoyaltyTransaction>? transactions,
     bool? isLoading,
+    bool? isCinepointsEnabled,
   }) {
     return LoyaltyState(
       availablePoints: availablePoints ?? this.availablePoints,
@@ -36,6 +39,7 @@ class LoyaltyState {
       totalRedeemed: totalRedeemed ?? this.totalRedeemed,
       transactions: transactions ?? this.transactions,
       isLoading: isLoading ?? this.isLoading,
+      isCinepointsEnabled: isCinepointsEnabled ?? this.isCinepointsEnabled,
     );
   }
 }
@@ -50,6 +54,7 @@ class LoyaltyNotifier extends StateNotifier<LoyaltyState> {
   }
 
   void _init() {
+    fetchGlobalConfig();
     final auth = _ref.read(authProvider);
     if (auth.status == AuthStatus.AUTHENTICATED && auth.userId != null) {
       fetchWallet();
@@ -96,6 +101,26 @@ class LoyaltyNotifier extends StateNotifier<LoyaltyState> {
     }
   }
 
+  Future<void> fetchGlobalConfig() async {
+    try {
+      final client = Supabase.instance.client;
+      final response = await client
+          .from('global_settings')
+          .select('value')
+          .eq('key', 'platform_fees')
+          .maybeSingle();
+
+      if (response != null && response['value'] != null) {
+        final val = Map<String, dynamic>.from(response['value'] as Map);
+        if (val.containsKey('enable_cinepoints')) {
+          state = state.copyWith(isCinepointsEnabled: val['enable_cinepoints'] as bool);
+        }
+      }
+    } catch (e) {
+      print('Error fetching cinepoints config: $e');
+    }
+  }
+
   Future<void> fetchTransactions() async {
     final userId = _ref.read(authProvider).userId;
     if (userId == null) return;
@@ -114,12 +139,13 @@ class LoyaltyNotifier extends StateNotifier<LoyaltyState> {
   }
 
   int calculateEarnedPoints(double amount) {
-    if (amount < 100) return 0;
+    if (!state.isCinepointsEnabled || amount < 100) return 0;
     // Rule: 2 points for every 100 INR expense
     return ((amount / 100).floor()) * 2;
   }
 
   double calculateRedeemableValue(int points) {
+    if (!state.isCinepointsEnabled) return 0.0;
     return points * pointValue;
   }
 }
