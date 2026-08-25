@@ -153,6 +153,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> signInWithApple() async {
+    final success = await _ref.read(authServiceProvider).signInWithApple();
+    if (!success) {
+      throw 'Apple sign-in was canceled.';
+    }
+  }
+
   Future<void> signInWithEmail(String email, String password) async {
     await _ref.read(authServiceProvider).signInWithEmail(email: email.trim(), password: password);
   }
