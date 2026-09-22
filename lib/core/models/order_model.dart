@@ -1,4 +1,6 @@
+import 'dart:convert';
 import '../../../core/models/food_item.dart';
+import '../../../core/models/addon_model.dart';
 
 enum OrderStatus { PENDING, PREPARING, READY, DELIVERED, CANCELLED }
 enum PaymentStatus { PENDING, SUCCESS, FAILED }
@@ -89,16 +91,68 @@ class OrderModel {
   }
 
   factory OrderModel.fromMap(Map<String, dynamic> map) {
-    final rawItems = (map['items'] as List<dynamic>? ?? []);
+    List<dynamic> rawItems = [];
+    final itemsField = map['items'];
+    if (itemsField is List) {
+      rawItems = itemsField;
+    } else if (itemsField is String && itemsField.isNotEmpty) {
+      try {
+        final decoded = jsonDecode(itemsField);
+        if (decoded is List) {
+          rawItems = decoded;
+        }
+      } catch (e) {
+        print('OrderModel: Error decoding items JSON: $e');
+      }
+    }
+
     final dbId = map['id']?.toString() ?? '';
     final dbDisplayId = map['display_id']?.toString();
-    
+
+    OrderStatus orderStatus = OrderStatus.PENDING;
+    final statusStr = map['status']?.toString().toUpperCase().trim();
+    if (statusStr != null) {
+      for (final val in OrderStatus.values) {
+        if (val.name.toUpperCase() == statusStr) {
+          orderStatus = val;
+          break;
+        }
+      }
+    }
+
+    PaymentStatus paymentStatus = PaymentStatus.PENDING;
+    final payStatusStr = map['payment_status']?.toString().toUpperCase().trim();
+    if (payStatusStr != null) {
+      for (final val in PaymentStatus.values) {
+        if (val.name.toUpperCase() == payStatusStr) {
+          paymentStatus = val;
+          break;
+        }
+      }
+      if (payStatusStr == 'PAID' || payStatusStr == 'SUCCESS' || payStatusStr == 'COMPLETED') {
+        paymentStatus = PaymentStatus.SUCCESS;
+      }
+    }
+
+    PaymentMethod paymentMethod = PaymentMethod.DEMO_UPI;
+    final payMethodStr = map['payment_method']?.toString().toUpperCase().trim();
+    if (payMethodStr != null) {
+      for (final val in PaymentMethod.values) {
+        if (val.name.toUpperCase() == payMethodStr) {
+          paymentMethod = val;
+          break;
+        }
+      }
+    }
+
     return OrderModel(
       id: dbId,
       displayId: dbDisplayId ?? dbId.substring(0, dbId.length > 8 ? 8 : dbId.length),
       items: rawItems.map((item) {
-        final row = item as Map<String, dynamic>;
+        final row = item is Map<String, dynamic> ? item : (item is Map ? Map<String, dynamic>.from(item) : <String, dynamic>{});
         final foodId = row['food_id']?.toString() ?? '';
+        final isDelivered = row['is_delivered'] == true || row['kds_status']?.toString().toUpperCase() == 'DELIVERED';
+
         return OrderItem(
           itemId: row['item_id']?.toString() ?? '${foodId}_${DateTime.now().millisecondsSinceEpoch}',
           foodItem: FoodItem(
@@ -110,29 +164,20 @@ class OrderModel {
             category: row['food_category']?.toString() ?? 'Classics',
           ),
           quantity: (row['quantity'] as num?)?.toInt() ?? 1,
-          isDelivered: row['is_delivered'] == true,
+          isDelivered: isDelivered,
           note: row['item_note']?.toString(),           // Feature 1: item note
           isCombo: row['is_combo'] == true,             // Feature 2: combo flag
           comboId: row['combo_id']?.toString(),         // Feature 2: combo id
           comboName: row['combo_name']?.toString(),     // Feature 2: combo name
-          kdsStatus: row['kds_status']?.toString() ?? 'PENDING',
+          kdsStatus: row['kds_status']?.toString() ?? (isDelivered ? 'DELIVERED' : 'PENDING'),
         );
       }).toList(),
       totalAmount: (map['total_amount'] as num?)?.toDouble() ?? 0,
-      status: OrderStatus.values.firstWhere(
-        (value) => value.name == map['status'],
-        orElse: () => OrderStatus.PENDING,
-      ),
+      status: orderStatus,
       timestamp: DateTime.tryParse(map['timestamp']?.toString() ?? '') ?? DateTime.now(),
       location: map['location']?.toString() ?? 'Hall 1 • Screen 1 • A1',
-      paymentStatus: PaymentStatus.values.firstWhere(
-        (value) => value.name == map['payment_status'],
-        orElse: () => PaymentStatus.PENDING,
-      ),
-      paymentMethod: PaymentMethod.values.firstWhere(
-        (value) => value.name == map['payment_method'],
-        orElse: () => PaymentMethod.DEMO_UPI,
-      ),
+      paymentStatus: paymentStatus,
+      paymentMethod: paymentMethod,
       customerPhone: map['customer_phone']?.toString() ?? 'NA',
       pointsEarned: map['points_earned'] as int?,
       pointsRedeemed: map['points_redeemed'] as int?,
@@ -152,6 +197,7 @@ class OrderItem {
   final String? comboId;    // Feature 2: combo UUID
   final String? comboName;  // Feature 2: combo display name
   final String kdsStatus;   // PENDING, PREPARING, READY, DELIVERED
+  final List<SelectedAddon> addons; // Feature 3: selected add-ons/modifiers
 
   OrderItem({
     required this.itemId,
@@ -163,6 +209,7 @@ class OrderItem {
     this.comboId,
     this.comboName,
     this.kdsStatus = 'PENDING',
+    this.addons = const [],
   });
 
   Map<String, dynamic> toMap() {
@@ -181,6 +228,7 @@ class OrderItem {
       if (isCombo) 'is_combo': true,                             // Feature 2
       if (comboId != null) 'combo_id': comboId,                  // Feature 2
       if (comboName != null) 'combo_name': comboName,            // Feature 2
+      if (addons.isNotEmpty) 'addons': addons.map((a) => a.toMap()).toList(), // Feature 3
     };
   }
 }

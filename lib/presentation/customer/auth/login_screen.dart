@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter/foundation.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import '../../../core/providers/auth_provider.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -136,11 +137,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return Scaffold(
       backgroundColor: colorScheme.surface,
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 32.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 32.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
             const SizedBox(height: 24),
             Text(
               'SIGN IN',
@@ -223,17 +227,17 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 40),
+            const SizedBox(height: 32),
             Container(
               width: double.infinity,
-              height: 72,
+              height: 50,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: colorScheme.primary.withValues(alpha: 0.3),
-                    blurRadius: 30,
-                    offset: const Offset(0, 15),
+                    color: colorScheme.primary.withValues(alpha: 0.25),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
@@ -243,7 +247,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   backgroundColor: colorScheme.primary,
                   foregroundColor: colorScheme.onPrimary,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   elevation: 0,
                 ),
@@ -284,31 +288,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Expanded(child: Divider(color: colorScheme.outline.withValues(alpha: 0.1))),
               ],
             ),
-            const SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _isLoading ? null : _signInWithGoogle,
-              icon: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-                child: Text(
-                  'G',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.blue.shade600,
-                  ),
-                ),
+            const SizedBox(height: 20),
+            if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) ...[
+              SignInWithAppleButton(
+                onPressed: _isLoading ? null : _signInWithApple,
+                height: 50,
+                style: theme.brightness == Brightness.dark
+                    ? SignInWithAppleButtonStyle.white
+                    : SignInWithAppleButtonStyle.black,
+                borderRadius: BorderRadius.circular(16),
               ),
-              label: const Text('Sign in with Google'),
+              const SizedBox(height: 12),
+            ],
+            ElevatedButton(
+              onPressed: _isLoading ? null : _signInWithGoogle,
               style: ElevatedButton.styleFrom(
-                minimumSize: const Size.fromHeight(72),
+                minimumSize: const Size.fromHeight(50),
                 backgroundColor: Colors.white,
                 foregroundColor: Colors.black87,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+                  borderRadius: BorderRadius.circular(16),
                   side: BorderSide(color: Colors.grey.shade300),
                 ),
                 elevation: 0,
@@ -317,37 +316,38 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   letterSpacing: 0.5,
                 ),
               ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      'G',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.blue.shade600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('Sign in with Google'),
+                ],
+              ),
             ),
-            if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) ...[
-              const SizedBox(height: 16),
-              ElevatedButton.icon(
+            if (defaultTargetPlatform != TargetPlatform.iOS && defaultTargetPlatform != TargetPlatform.macOS) ...[
+              const SizedBox(height: 12),
+              SignInWithAppleButton(
                 onPressed: _isLoading ? null : _signInWithApple,
-                icon: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: Colors.black,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(
-                    Icons.apple,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                label: const Text('Sign in with Apple'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size.fromHeight(72),
-                  backgroundColor: Colors.black,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  elevation: 0,
-                  textStyle: theme.textTheme.labelLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 0.5,
-                  ),
-                ),
+                height: 50,
+                style: theme.brightness == Brightness.dark
+                    ? SignInWithAppleButtonStyle.white
+                    : SignInWithAppleButtonStyle.black,
+                borderRadius: BorderRadius.circular(16),
               ),
             ],
             const SizedBox(height: 16),
@@ -356,7 +356,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               child: RichText(
                 textAlign: TextAlign.center,
                 text: TextSpan(
-                  text: 'By continuing with Google, you agree to our ',
+                  text: 'By continuing, you agree to our ',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colorScheme.onSurface.withValues(alpha: 0.5),
                     fontSize: 10,
@@ -428,7 +428,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ],
         ),
       ),
-      ),
+    ),
+  ),
+),
     );
   }
 

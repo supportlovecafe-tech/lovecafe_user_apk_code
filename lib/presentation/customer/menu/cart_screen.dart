@@ -21,7 +21,7 @@ class CartScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cart = ref.watch(cartProvider);
     final total = cart.items.fold<double>(
-        0, (sum, item) => sum + (item.foodItem.price * item.quantity));
+        0, (sum, item) => sum + (item.effectiveUnitPrice * item.quantity));
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -133,7 +133,7 @@ class CartScreen extends ConsumerWidget {
             child: const Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 28),
           ),
           onDismissed: (direction) {
-            ref.read(cartProvider.notifier).removeItem(item.foodItem.id);
+            ref.read(cartProvider.notifier).removeItem(item);
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text('${item.foodItem.name} removed from cart'),
@@ -185,7 +185,7 @@ class CartScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      '₹${item.foodItem.price.toInt()} each',
+                      '₹${item.effectiveUnitPrice.toInt()} each',
                       style: AppTextStyles.priceSmall,
                     ),
                   ],
@@ -194,6 +194,39 @@ class CartScreen extends ConsumerWidget {
               _buildQuantityPicker(ref, item),
             ],
           ),
+          
+          // Display selected add-ons if any
+          if (item.selectedAddons.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 10, left: 2, right: 2),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: item.selectedAddons.expand((addonGroup) {
+                  return addonGroup.selectedOptions.map((opt) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Row(
+                        children: [
+                          Icon(Icons.add_rounded, size: 12, color: AppColors.textDisabled),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              opt.name,
+                              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                            ),
+                          ),
+                          if (opt.price > 0)
+                            Text(
+                              '+₹${opt.price.toInt()}',
+                              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                            ),
+                        ],
+                      ),
+                    );
+                  });
+                }).toList(),
+              ),
+            ),
           if (item.note != null && item.note!.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 12),
@@ -294,7 +327,7 @@ class CartScreen extends ConsumerWidget {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: () {
-                  ref.read(cartProvider.notifier).updateItemNote(item.foodItem.id, noteController.text);
+                  ref.read(cartProvider.notifier).updateItemNote(item, noteController.text);
                   Navigator.pop(context);
                 },
                 child: const Text('SAVE NOTE'),
@@ -320,7 +353,7 @@ class CartScreen extends ConsumerWidget {
             icon: Icons.remove_rounded,
             onTap: () => ref
                 .read(cartProvider.notifier)
-                .updateQuantity(item.foodItem.id, -1),
+                .updateQuantity(item, -1),
             color: AppColors.textSecondary,
           ),
           Padding(
@@ -332,7 +365,7 @@ class CartScreen extends ConsumerWidget {
             icon: Icons.add_rounded,
             onTap: () => ref
                 .read(cartProvider.notifier)
-                .updateQuantity(item.foodItem.id, 1),
+                .updateQuantity(item, 1),
             color: AppColors.primary,
             isPrimary: true,
           ),
@@ -393,10 +426,14 @@ class CartScreen extends ConsumerWidget {
               _summaryRow('Promo Savings', '-₹${discount.toStringAsFixed(2)}', isPromo: true),
               const SizedBox(height: 6),
             ],
-            _summaryRow('CGST (2.5%)', '₹${cgst.toStringAsFixed(2)}'),
-            const SizedBox(height: 6),
-            _summaryRow('SGST (2.5%)', '₹${sgst.toStringAsFixed(2)}'),
-            const SizedBox(height: 6),
+            if (cgst > 0) ...[
+              _summaryRow('CGST (2.5%)', '₹${cgst.toStringAsFixed(2)}'),
+              const SizedBox(height: 6),
+            ],
+            if (sgst > 0) ...[
+              _summaryRow('SGST (2.5%)', '₹${sgst.toStringAsFixed(2)}'),
+              const SizedBox(height: 6),
+            ],
             _summaryRow(
               'Platform Fee (${cartNotifier.platformFeePercent.toStringAsFixed(cartNotifier.platformFeePercent == cartNotifier.platformFeePercent.toInt() ? 0 : 1)}%)',
               '₹${platformCharges.toStringAsFixed(2)}',
@@ -476,7 +513,7 @@ class CartScreen extends ConsumerWidget {
         return Column(
           children: alerts.map((alert) {
             final missingQty = alert['missingQuantity'] as int;
-            final item = alert['item'] as FoodItem;
+            final item = alert['item'] as CartItem;
             return Container(
               margin: const EdgeInsets.only(left: 24, right: 24, top: 12),
               padding: const EdgeInsets.all(16),
@@ -525,10 +562,10 @@ class CartScreen extends ConsumerWidget {
                   const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: () {
-                      ref.read(cartProvider.notifier).updateQuantity(item.id, missingQty);
+                      ref.read(cartProvider.notifier).updateQuantity(item, missingQty);
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                          content: Text('Added $missingQty more ${item.name} to complete your BOGO!'),
+                          content: Text('Added $missingQty more ${item.foodItem.name} to complete your BOGO!'),
                           behavior: SnackBarBehavior.floating,
                         ),
                       );
@@ -587,9 +624,9 @@ class CartScreen extends ConsumerWidget {
           final missingQty = blockSize - remainder;
           alerts.add({
             'offer': offer,
-            'item': representativeItem!.foodItem,
+            'item': representativeItem,
             'missingQuantity': missingQty,
-            'message': 'Add $missingQty more ${representativeItem.foodItem.name}(s) to unlock your "${offer['title']}" BOGO free deal!',
+            'message': 'Add $missingQty more ${representativeItem?.foodItem.name}(s) to unlock your "${offer['title']}" BOGO free deal!',
           });
         }
       }

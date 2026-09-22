@@ -231,9 +231,42 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
                   Text('${item.quantity}x', style: AppTextStyles.titleMedium.copyWith(color: AppColors.primary)),
                 const SizedBox(width: 8),
                 Expanded(child: Text(item.foodItem.name, style: AppTextStyles.titleMedium)),
-                Text('₹${(item.foodItem.price * item.quantity).toStringAsFixed(0)}', style: AppTextStyles.priceSmall),
+                Text('₹${(item.effectiveUnitPrice * item.quantity).toStringAsFixed(0)}', style: AppTextStyles.priceSmall),
               ],
             ),
+            
+            // Render selected add-ons if any
+            if (item.selectedAddons.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, left: 2, right: 2),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: item.selectedAddons.expand((addonGroup) {
+                    return addonGroup.selectedOptions.map((opt) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          children: [
+                            Icon(Icons.add_rounded, size: 12, color: AppColors.textDisabled),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                opt.name,
+                                style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                              ),
+                            ),
+                            if (opt.price > 0)
+                              Text(
+                                '+₹${opt.price.toInt()}',
+                                style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary, fontSize: 11),
+                              ),
+                          ],
+                        ),
+                      );
+                    });
+                  }).toList(),
+                ),
+              ),
             // Feature 1: Show item note if present
             if (item.note != null && item.note!.isNotEmpty)
               Padding(
@@ -355,10 +388,14 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     return Column(
       children: [
         _priceRow('Subtotal', subtotal),
-        const SizedBox(height: 8),
-        _priceRow('CGST (2.5%)', cgst),
-        const SizedBox(height: 8),
-        _priceRow('SGST (2.5%)', sgst),
+        if (cgst > 0) ...[
+          const SizedBox(height: 8),
+          _priceRow('CGST (2.5%)', cgst),
+        ],
+        if (sgst > 0) ...[
+          const SizedBox(height: 8),
+          _priceRow('SGST (2.5%)', sgst),
+        ],
         const SizedBox(height: 8),
         _priceRow('Platform Fee (${platformFeePercent.toStringAsFixed(platformFeePercent == platformFeePercent.toInt() ? 0 : 1)}%)', platformFee),
         if (discount > 0) ...[
@@ -646,6 +683,7 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
           isCombo: item.isCombo,
           comboId: item.comboId,
           comboName: item.comboName,
+          addons: item.selectedAddons,
         );
       }).toList();
 

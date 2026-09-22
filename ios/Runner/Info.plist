@@ -66,6 +66,8 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>UIRequiresFullScreen</key>
+	<true/>
 	<key>NSCameraUsageDescription</key>
 	<string>Love Cafe needs camera access to let you upload your profile picture or scan cafe QR codes.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
@@ -73,7 +75,7 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Love Cafe needs microphone access for customer support calls.</string>
 	<key>NSUserTrackingUsageDescription</key>
-	<string>Love Cafe requires this permission to provide personalized offers and improve your app experience.</string>
+	<string>This identifier is used to deliver personalized cinema discounts and food offers tailored to your preferences.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>CFBundleURLTypes</key>

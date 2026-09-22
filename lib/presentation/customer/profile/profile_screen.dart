@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -152,9 +153,15 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                       title: 'Rate Us',
                       subtitle: 'Love the app? Leave a review!',
                       onTap: () {
-                        _launchURL('market://details?id=in.org.lovecafe.customer').catchError((_) {
-                          _launchURL('https://play.google.com/store/apps/details?id=in.org.lovecafe.customer');
-                        });
+                        if (defaultTargetPlatform == TargetPlatform.android) {
+                          _launchURL('market://details?id=in.org.lovecafe.customer').catchError((_) {
+                            _launchURL('https://play.google.com/store/apps/details?id=in.org.lovecafe.customer');
+                          });
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Thank you for rating Love Cafe!')),
+                          );
+                        }
                       },
                     ),
                     _buildMenuTile(
@@ -338,7 +345,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.phone_android_rounded,
+            Icon(Icons.smartphone_rounded,
                 size: 12, color: AppColors.textDisabled),
             const SizedBox(width: 4),
             Text(auth.phone ?? '',

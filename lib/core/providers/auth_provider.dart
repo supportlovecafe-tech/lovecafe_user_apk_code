@@ -90,13 +90,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
           var profile = await client
               .from('customer_profiles')
               .select()
-              .eq('id', user.id)
+              .or('id.eq.${user.id},user_id.eq.${user.id}')
               .maybeSingle();
 
           final String? firstName = profile?['first_name'];
           final String? lastName = profile?['last_name'];
           final String? fullName = profile?['full_name'] ?? 
-              ((firstName != null || lastName != null) ? '${firstName ?? ''} ${lastName ?? ''}'.trim() : null);
+              ((firstName != null || lastName != null) ? '${firstName ?? ''} ${lastName ?? ''}'.trim() : null) ??
+              user.userMetadata?['full_name'] ??
+              user.userMetadata?['name'];
 
           state = AuthState.authenticated(
             id: user.id,

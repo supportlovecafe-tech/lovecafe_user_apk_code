@@ -11,18 +11,10 @@ import '../../../core/constants/app_shadows.dart';
 import '../../../core/models/food_item.dart';
 import '../../../core/providers/cart_provider.dart';
 import '../../../core/providers/seat_selection_provider.dart';
+import '../../../core/providers/addon_provider.dart';
+import '../../../core/models/addon_model.dart';
 import '../../shared/widgets/safe_network_image.dart';
-
-/// Frontend-only size variant model
-/// Regular = base price, Large = 1.4x, Bucket = 1.9x
-class _SizeVariant {
-  final String label;
-  final double multiplier;
-
-  const _SizeVariant(this.label, this.multiplier);
-
-  double priceFor(double base) => (base * multiplier).roundToDouble();
-}
+import 'widgets/addon_selection_sheet.dart';
 
 class FoodDetailScreen extends ConsumerStatefulWidget {
   final FoodItem foodItem;
@@ -34,54 +26,62 @@ class FoodDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
-  static const List<_SizeVariant> _sizes = [
-    _SizeVariant('Regular', 1.0),
-    _SizeVariant('Large', 1.4),
-    _SizeVariant('Bucket', 1.9),
-  ];
-
-  int _selectedSizeIndex = 0;
   int _quantity = 1;
 
-  double get _unitPrice =>
-      _sizes[_selectedSizeIndex].priceFor(widget.foodItem.price);
+  double get _unitPrice => widget.foodItem.price;
   double get _totalPrice => _unitPrice * _quantity;
-  String get _selectedSizeLabel => _sizes[_selectedSizeIndex].label;
 
-  void _addToCart() {
+  Future<void> _addToCart() async {
     HapticFeedback.lightImpact();
     final hallId = ref.read(seatSelectionProvider).hallId;
-    // Create a modified food item with the selected size's price
-    final variantItem = widget.foodItem.copyWith(
-      name: _quantity > 1 || _selectedSizeIndex > 0
-          ? '${widget.foodItem.name} (${_selectedSizeLabel})'
-          : widget.foodItem.name,
-      price: _unitPrice,
-    );
-    for (int i = 0; i < _quantity; i++) {
-      ref.read(cartProvider.notifier).validateAndAddItem(variantItem, hallId);
+    final cinemaId = widget.foodItem.cinemaId ?? hallId;
+    
+    final variantItem = widget.foodItem;
+
+    List<SelectedAddon> addons = [];
+    if (cinemaId != null) {
+      final allGroups = await ref.read(addonGroupsProvider(cinemaId).future);
+      final assignments = await ref.read(addonAssignmentsProvider(cinemaId).future);
+      final itemAddons = getAddonsForItem(item: variantItem, allGroups: allGroups, assignments: assignments);
+      
+      if (itemAddons.isNotEmpty) {
+        final selected = await showAddonSelectionSheet(
+          context: context, 
+          item: variantItem, 
+          addonGroups: itemAddons
+        );
+        if (selected == null) return; // User cancelled
+        addons = selected;
+      }
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle_rounded,
-                color: AppColors.success, size: 18),
-            const SizedBox(width: 10),
-            Text('${widget.foodItem.name} added to cart',
-                style: AppTextStyles.labelMedium
-                    .copyWith(color: AppColors.textPrimary)),
-          ],
+
+    for (int i = 0; i < _quantity; i++) {
+      ref.read(cartProvider.notifier).validateAndAddItem(variantItem, hallId, selectedAddons: addons);
+    }
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded,
+                  color: AppColors.success, size: 18),
+              const SizedBox(width: 10),
+              Text('${widget.foodItem.name} added to cart',
+                  style: AppTextStyles.labelMedium
+                      .copyWith(color: AppColors.textPrimary)),
+            ],
+          ),
+          backgroundColor: AppColors.surfaceElevated,
+          behavior: SnackBarBehavior.floating,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          duration: const Duration(seconds: 2),
         ),
-        backgroundColor: AppColors.surfaceElevated,
-        behavior: SnackBarBehavior.floating,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-    context.pop();
+      );
+      context.pop();
+    }
   }
 
   @override
@@ -127,12 +127,7 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
                     .animate()
                     .fadeIn(delay: 150.ms, duration: 300.ms),
 
-                const SizedBox(height: 28),
 
-                // ── Size selector
-                _buildSizeSelector()
-                    .animate()
-                    .fadeIn(delay: 200.ms, duration: 300.ms),
 
                 const SizedBox(height: 28),
 
@@ -283,79 +278,6 @@ class _FoodDetailScreenState extends ConsumerState<FoodDetailScreen> {
     );
   }
 
-  // ══════════════════════════════════════════
-  // SIZE SELECTOR
-  // ══════════════════════════════════════════
-
-  Widget _buildSizeSelector() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Choose Size', style: AppTextStyles.titleMedium),
-          const SizedBox(height: 14),
-          Row(
-            children: _sizes.asMap().entries.map((entry) {
-              final i = entry.key;
-              final size = entry.value;
-              final bool selected = i == _selectedSizeIndex;
-              final double price = size.priceFor(widget.foodItem.price);
-
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedSizeIndex = i),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: EdgeInsets.only(right: i < 2 ? 10 : 0),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      color: selected
-                          ? AppColors.primary.withValues(alpha: 0.12)
-                          : AppColors.surface,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: selected
-                            ? AppColors.primary
-                            : Colors.white.withValues(alpha: 0.07),
-                        width: selected ? 1.5 : 1,
-                      ),
-                      boxShadow: selected ? AppShadows.pinkGlowSoft : [],
-                    ),
-                    child: Column(
-                      children: [
-                        Text(
-                          size.label,
-                          style: AppTextStyles.labelMedium.copyWith(
-                            color: selected
-                                ? AppColors.primary
-                                : AppColors.textSecondary,
-                            fontWeight: selected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '₹${price.toInt()}',
-                          style: AppTextStyles.priceSmall.copyWith(
-                            fontSize: 14,
-                            color: selected
-                                ? AppColors.primary
-                                : AppColors.textDisabled,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ══════════════════════════════════════════
   // QUANTITY STEPPER

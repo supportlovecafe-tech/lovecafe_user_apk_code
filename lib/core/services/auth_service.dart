@@ -64,8 +64,13 @@ class AuthService {
     final user = currentUser;
     if (user == null) return;
     
-    // We update customer_profiles using the current auth user ID
-    await client.from('customer_profiles').update(data).eq('id', user.id);
+    // We upsert customer_profiles using the current auth user ID
+    // This ensures the profile is created if it was missing (e.g., from Google Login)
+    data['id'] = user.id;
+    data['user_id'] = user.id;
+    // ensure email is preserved if present
+    data['email'] ??= user.email;
+    await client.from('customer_profiles').upsert(data);
   }
 
   Future<void> signOut() async {
@@ -153,6 +158,35 @@ class AuthService {
         idToken: idToken,
         nonce: rawNonce,
       );
+
+      if (response.session != null) {
+        final givenName = credential.givenName;
+        final familyName = credential.familyName;
+        final fullName = [givenName, familyName]
+            .where((s) => s != null && s.trim().isNotEmpty)
+            .join(' ')
+            .trim();
+
+        if (fullName.isNotEmpty) {
+          try {
+            await client.auth.updateUser(
+              UserAttributes(data: {'full_name': fullName, 'name': fullName}),
+            );
+          } catch (_) {}
+
+          try {
+            final uid = response.session!.user.id;
+            await client.from('customer_profiles').upsert({
+              'user_id': uid,
+              'full_name': fullName,
+              'first_name': givenName,
+              'last_name': familyName,
+              'email': response.session!.user.email,
+              'updated_at': DateTime.now().toUtc().toIso8601String(),
+            }, onConflict: 'user_id');
+          } catch (_) {}
+        }
+      }
       
       return response.session != null;
     } catch (e) {
@@ -172,7 +206,7 @@ class AuthService {
   // --- Phone OTP Registration & Login Flow ---
 
   Future<void> sendOtp(String phone) async {
-    final response = await client.functions.invoke('dummy', headers: {}); // Just to get the structure if we used edge functions, but we are using our custom Next.js backend
+    await client.functions.invoke('dummy', headers: {}); // Just to get the structure if we used edge functions, but we are using our custom Next.js backend
     // Since we are using Next.js backend, we use standard http
     // Let's use standard http package or simply assume the caller handles http for sendOtp like in Checkout
     // Wait, it's better to implement it here for reusability, but we need the backend URL.

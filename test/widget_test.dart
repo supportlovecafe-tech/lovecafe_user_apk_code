@@ -7,11 +7,11 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(
       const ProviderScope(
-        child: CinemaEatsCustomerApp(),
+        child: LoveCafeCustomerApp(),
       ),
     );
 
     // Verify that the app is constructed successfully
-    expect(find.byType(CinemaEatsCustomerApp), findsOneWidget);
+    expect(find.byType(LoveCafeCustomerApp), findsOneWidget);
   });
 }

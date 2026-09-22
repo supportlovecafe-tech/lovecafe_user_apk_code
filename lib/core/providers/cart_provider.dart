@@ -7,6 +7,7 @@ import 'auth_provider.dart';
 import '../models/food_item.dart';
 import '../models/combo_model.dart';
 import '../models/cart_breakdown.dart';
+import '../models/addon_model.dart';
 import '../services/supabase_service.dart';
 
 class CartItem {
@@ -19,6 +20,8 @@ class CartItem {
   final String? comboName;
   final bool isOffer;
   final String? offerId;
+  // Feature 3: add-ons / modifiers
+  final List<SelectedAddon> selectedAddons;
 
   CartItem({
     required this.foodItem,
@@ -29,9 +32,27 @@ class CartItem {
     this.comboName,
     this.isOffer = false,
     this.offerId,
+    this.selectedAddons = const [],
   });
 
-  CartItem copyWith({int? quantity, String? note}) {
+  /// The extra price from all selected add-ons for one unit of this item.
+  double get addonUnitPrice =>
+      selectedAddons.fold(0.0, (s, a) => s + a.extraPrice);
+
+  /// Effective unit price including add-on extras.
+  double get effectiveUnitPrice => foodItem.price + addonUnitPrice;
+
+  /// A string signature so that same item with different addons = different cart line.
+  String get addonSignature {
+    if (selectedAddons.isEmpty) return '';
+    final parts = selectedAddons.map((a) {
+      final opts = a.selectedOptions.map((o) => o.id).toList()..sort();
+      return '${a.groupId}:${opts.join(',')}';  
+    }).toList()..sort();
+    return parts.join('|');
+  }
+
+  CartItem copyWith({int? quantity, String? note, List<SelectedAddon>? selectedAddons}) {
     return CartItem(
       foodItem: foodItem,
       quantity: quantity ?? this.quantity,
@@ -41,6 +62,7 @@ class CartItem {
       comboName: comboName,
       isOffer: isOffer,
       offerId: offerId,
+      selectedAddons: selectedAddons ?? this.selectedAddons,
     );
   }
 
@@ -54,10 +76,12 @@ class CartItem {
       'comboName': comboName,
       'isOffer': isOffer,
       'offerId': offerId,
+      'selectedAddons': selectedAddons.map((a) => a.toMap()).toList(),
     };
   }
 
   factory CartItem.fromMap(Map<String, dynamic> map) {
+    final rawAddons = (map['selectedAddons'] as List<dynamic>? ?? []);
     return CartItem(
       foodItem: FoodItem.fromMap(map['foodItem']),
       quantity: map['quantity'],
@@ -67,6 +91,9 @@ class CartItem {
       comboName: map['comboName'],
       isOffer: map['isOffer'] as bool? ?? false,
       offerId: map['offerId'],
+      selectedAddons: rawAddons
+          .map((a) => SelectedAddon.fromMap(a as Map<String, dynamic>))
+          .toList(),
     );
   }
 }
@@ -185,6 +212,7 @@ class CartNotifier extends StateNotifier<CartState> {
 
           double customPlatformPercent = 1.0;
           List<String> applicableCategories = ['ALL'];
+          bool enableGst = true;
           try {
             final feeResp = await Supabase.instance.client
                 .from('global_settings')
@@ -195,6 +223,7 @@ class CartNotifier extends StateNotifier<CartState> {
               final val = Map<String, dynamic>.from(feeResp['value'] as Map);
               customPlatformPercent = (val['online_fee_percent'] as num?)?.toDouble() ?? 1.0;
               applicableCategories = List<String>.from(val['applicable_categories'] ?? ['ALL']);
+              enableGst = val['enable_gst'] as bool? ?? (val['enable_cgst_sgst'] as bool? ?? true);
             }
           } catch (feeErr) {
             print('Could not load global platform fee settings in fallback: $feeErr');
@@ -313,8 +342,8 @@ class CartNotifier extends StateNotifier<CartState> {
             }
           }
 
-          final cgst = netTaxableSubtotal * 0.025;
-          final sgst = netTaxableSubtotal * 0.025;
+          final cgst = enableGst ? (netTaxableSubtotal * 0.025) : 0.0;
+          final sgst = enableGst ? (netTaxableSubtotal * 0.025) : 0.0;
           final platformCharges = feeTaxableSubtotal * (customPlatformPercent / 100);
           state = state.copyWith(
             breakdown: CartBreakdown(
@@ -334,6 +363,7 @@ class CartNotifier extends StateNotifier<CartState> {
           
           double customPlatformPercent = 1.0;
           List<String> applicableCategories = ['ALL'];
+          bool enableGst = true;
           try {
             final feeResp = await Supabase.instance.client
                 .from('global_settings')
@@ -344,6 +374,7 @@ class CartNotifier extends StateNotifier<CartState> {
               final val = Map<String, dynamic>.from(feeResp['value'] as Map);
               customPlatformPercent = (val['online_fee_percent'] as num?)?.toDouble() ?? 1.0;
               applicableCategories = List<String>.from(val['applicable_categories'] ?? ['ALL']);
+              enableGst = val['enable_gst'] as bool? ?? (val['enable_cgst_sgst'] as bool? ?? true);
             }
           } catch (feeErr) {
             print('Could not load global platform fee settings in last-resort fallback: $feeErr');
@@ -362,8 +393,8 @@ class CartNotifier extends StateNotifier<CartState> {
             }
           }
 
-          final cgst = taxableSt * 0.025;
-          final sgst = taxableSt * 0.025;
+          final cgst = enableGst ? (taxableSt * 0.025) : 0.0;
+          final sgst = enableGst ? (taxableSt * 0.025) : 0.0;
           final platformCharges = feeTaxableSubtotal * (customPlatformPercent / 100);
           state = state.copyWith(
             breakdown: CartBreakdown(
@@ -380,7 +411,7 @@ class CartNotifier extends StateNotifier<CartState> {
     }
   }
 
-  void addItem(FoodItem item, {String? offerId}) {
+  void addItem(FoodItem item, {String? offerId, List<SelectedAddon> selectedAddons = const []}) {
     if (state.items.isNotEmpty && item.cinemaId != null) {
       final existingCinemaId = state.items.first.foodItem.cinemaId;
       if (existingCinemaId != null && existingCinemaId != item.cinemaId) {
@@ -388,8 +419,23 @@ class CartNotifier extends StateNotifier<CartState> {
       }
     }
 
-    final existingIndex =
-        state.items.indexWhere((element) => element.foodItem.id == item.id && !element.isCombo && element.offerId == offerId);
+    // Build a signature for this addon combination so different addon picks = different cart lines
+    final newItem = CartItem(
+      foodItem: item,
+      quantity: 1,
+      note: null,
+      isOffer: offerId != null,
+      offerId: offerId,
+      selectedAddons: selectedAddons,
+    );
+    final newSig = newItem.addonSignature;
+
+    final existingIndex = state.items.indexWhere((element) =>
+        element.foodItem.id == item.id &&
+        !element.isCombo &&
+        element.offerId == offerId &&
+        element.addonSignature == newSig);
+
     if (existingIndex != -1) {
       state = state.copyWith(items: [
         for (int i = 0; i < state.items.length; i++)
@@ -399,7 +445,7 @@ class CartNotifier extends StateNotifier<CartState> {
             state.items[i]
       ]);
     } else {
-      state = state.copyWith(items: [...state.items, CartItem(foodItem: item, quantity: 1, note: null, isOffer: offerId != null, offerId: offerId)]);
+      state = state.copyWith(items: [...state.items, newItem]);
     }
     _saveCart();
     _fetchBreakdown();
@@ -454,20 +500,34 @@ class CartNotifier extends StateNotifier<CartState> {
     _fetchBreakdown();
   }
 
-  void validateAndAddItem(FoodItem item, String? currentHallId, {String? offerId}) {
-    addItem(item, offerId: offerId);
+  void validateAndAddItem(FoodItem item, String? currentHallId, {String? offerId, List<SelectedAddon> selectedAddons = const []}) {
+    addItem(item, offerId: offerId, selectedAddons: selectedAddons);
   }
 
-  void removeItem(String itemId) {
-    state = state.copyWith(items: state.items.where((element) => element.foodItem.id != itemId).toList());
+  void removeItem(CartItem targetItem) {
+    state = state.copyWith(items: state.items.where((element) {
+      bool isMatch = element.foodItem.id == targetItem.foodItem.id &&
+          element.isCombo == targetItem.isCombo &&
+          element.comboId == targetItem.comboId &&
+          element.offerId == targetItem.offerId &&
+          element.addonSignature == targetItem.addonSignature;
+      return !isMatch;
+    }).toList());
     _saveCart();
     _fetchBreakdown();
   }
 
-  void updateQuantity(String itemId, int delta) {
+  void updateQuantity(CartItem targetItem, int delta) {
     final List<CartItem> newItems = [];
     for (final item in state.items) {
-      if (item.foodItem.id == itemId) {
+      // Match exactly on id + combo properties + offer properties + addon signature
+      bool isMatch = item.foodItem.id == targetItem.foodItem.id &&
+          item.isCombo == targetItem.isCombo &&
+          item.comboId == targetItem.comboId &&
+          item.offerId == targetItem.offerId &&
+          item.addonSignature == targetItem.addonSignature;
+          
+      if (isMatch) {
         final newQty = item.quantity + delta;
         if (newQty > 0) {
           newItems.add(item.copyWith(quantity: newQty));
@@ -481,10 +541,17 @@ class CartNotifier extends StateNotifier<CartState> {
     _fetchBreakdown();
   }
 
-  void updateItemNote(String itemId, String? note) {
+  void updateItemNote(CartItem targetItem, String? note) {
     state = state.copyWith(items: [
       for (final item in state.items)
-        if (item.foodItem.id == itemId) item.copyWith(note: note) else item
+        if (item.foodItem.id == targetItem.foodItem.id &&
+            item.isCombo == targetItem.isCombo &&
+            item.comboId == targetItem.comboId &&
+            item.offerId == targetItem.offerId &&
+            item.addonSignature == targetItem.addonSignature)
+          item.copyWith(note: note)
+        else
+          item
     ]);
     _saveCart();
   }

@@ -57,7 +57,7 @@ class SupabaseService {
       final response = await _client
           .from('combos')
           .select('*, combo_items(*)')
-          .eq('cinema_id', cinemaId)
+          .or('cinema_id.eq.$cinemaId,cinema_id.is.null')
           .eq('is_available', true);
       return (response as List).map((data) => ComboMeal.fromMap(data)).toList();
     }
@@ -98,7 +98,7 @@ class SupabaseService {
       'display_id': displayId,
       'items': items,
       'total_amount': totalAmount,
-      'location': "APK, ${location.replaceAll(' • ', ', ')}",
+      'location': "App, ${location.replaceAll(' • ', ', ')}",
       'customer_phone': customerPhone,
       'points_redeemed': pointsRedeemed ?? 0,
       'points_earned': pointsEarned ?? 0,

@@ -22,6 +22,9 @@ import 'widgets/location_popup.dart';
 import 'widgets/combo_card.dart';
 import 'widgets/combo_detail_popup.dart';
 import 'widgets/reorder_section.dart';
+import 'widgets/addon_selection_sheet.dart';
+import '../../../core/providers/addon_provider.dart';
+import '../../../core/models/addon_model.dart';
 
 class MenuScreen extends ConsumerStatefulWidget {
   const MenuScreen({super.key, this.initialOffer});
@@ -785,7 +788,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                             ),
                           ),
                           ElevatedButton(
-                            onPressed: () {
+                            onPressed: () async {
                               // For unlimited offers, always use the promo price
                               // (per-item custom_price if available, else global promo_price)
                               final itemToAdd = (isUnlimitedOffer && promoPrice != null) 
@@ -795,18 +798,40 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                                   ) 
                                 : item;
 
+                              final cinemaId = itemToAdd.cinemaId ?? selection.hallId;
+                              List<SelectedAddon> addons = [];
+                              
+                              if (cinemaId != null) {
+                                final allGroups = await ref.read(addonGroupsProvider(cinemaId).future);
+                                final assignments = await ref.read(addonAssignmentsProvider(cinemaId).future);
+                                final itemAddons = getAddonsForItem(item: itemToAdd, allGroups: allGroups, assignments: assignments);
+                                
+                                if (itemAddons.isNotEmpty) {
+                                  final selected = await showAddonSelectionSheet(
+                                    context: context, 
+                                    item: itemToAdd, 
+                                    addonGroups: itemAddons
+                                  );
+                                  if (selected == null) return; // cancelled
+                                  addons = selected;
+                                }
+                              }
+
                               ref.read(cartProvider.notifier).validateAndAddItem(
                                 itemToAdd, 
                                 selection.hallId,
                                 offerId: offer['id'] as String,
+                                selectedAddons: addons,
                               );
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('${item.name} added to cart!'),
-                                  behavior: SnackBarBehavior.floating,
-                                  duration: const Duration(seconds: 1),
-                                ),
-                              );
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('${item.name} added to cart!'),
+                                    behavior: SnackBarBehavior.floating,
+                                    duration: const Duration(seconds: 1),
+                                  ),
+                                );
+                              }
                             },
                             style: ElevatedButton.styleFrom(
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -1162,15 +1187,37 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
               price: item.price,
               isVeg: item.isVeg,
               mode: FoodCardMode.compact,
-              onAdd: () {
+              onAdd: () async {
+                final cinemaId = item.cinemaId ?? selection.hallId;
+                List<SelectedAddon> addons = [];
+                
+                if (cinemaId != null) {
+                  final allGroups = await ref.read(addonGroupsProvider(cinemaId).future);
+                  final assignments = await ref.read(addonAssignmentsProvider(cinemaId).future);
+                  final itemAddons = getAddonsForItem(item: item, allGroups: allGroups, assignments: assignments);
+                  
+                  if (itemAddons.isNotEmpty) {
+                    final selected = await showAddonSelectionSheet(
+                      context: context, 
+                      item: item, 
+                      addonGroups: itemAddons
+                    );
+                    if (selected == null) return; // User cancelled
+                    addons = selected;
+                  }
+                }
+
                 ref.read(cartProvider.notifier).validateAndAddItem(
-                    item, selection.hallId);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${item.name} added!'),
-                    duration: const Duration(seconds: 1),
-                  ),
-                );
+                    item, selection.hallId, selectedAddons: addons);
+                
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${item.name} added!'),
+                      duration: const Duration(seconds: 1),
+                    ),
+                  );
+                }
               },
               onTap: () => context.push('/food-detail', extra: item),
             );

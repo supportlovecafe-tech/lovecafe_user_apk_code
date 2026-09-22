@@ -27,6 +27,9 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(ordersProvider.notifier).loadOrders();
+    });
   }
 
   @override
@@ -39,11 +42,21 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
   Widget build(BuildContext context) {
     final allOrders = ref.watch(ordersProvider);
 
-    final activeOrders = allOrders.where((o) =>
+    // Deduplicate in UI to guarantee unique order cards
+    final uniqueOrders = <OrderModel>[];
+    final seenOrderKeys = <String>{};
+    for (final o in allOrders) {
+      final key = o.displayId.isNotEmpty ? o.displayId : o.id;
+      if (seenOrderKeys.add(key)) {
+        uniqueOrders.add(o);
+      }
+    }
+
+    final activeOrders = uniqueOrders.where((o) =>
         o.status != OrderStatus.DELIVERED &&
         o.status != OrderStatus.CANCELLED).toList();
 
-    final completedOrders = allOrders.where((o) =>
+    final completedOrders = uniqueOrders.where((o) =>
         o.status == OrderStatus.DELIVERED ||
         o.status == OrderStatus.CANCELLED).toList();
 
@@ -58,27 +71,59 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
               controller: _tabController,
               children: [
                 // Tab 1: Active Orders
-                activeOrders.isEmpty
-                    ? _buildEmptyState(context, isActive: true)
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                        itemCount: activeOrders.length,
-                        itemBuilder: (context, index) {
-                          final order = activeOrders[index];
-                          return _buildActiveOrderCard(context, order);
-                        },
-                      ),
+                RefreshIndicator(
+                  color: AppColors.primary,
+                  backgroundColor: AppColors.surface,
+                  onRefresh: () async {
+                    await ref.read(ordersProvider.notifier).loadOrders();
+                  },
+                  child: activeOrders.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.6,
+                              child: _buildEmptyState(context, isActive: true),
+                            ),
+                          ],
+                        )
+                      : ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                          itemCount: activeOrders.length,
+                          itemBuilder: (context, index) {
+                            final order = activeOrders[index];
+                            return _buildActiveOrderCard(context, order);
+                          },
+                        ),
+                ),
                 // Tab 2: Transaction History
-                completedOrders.isEmpty
-                    ? _buildEmptyState(context, isActive: false)
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                        itemCount: completedOrders.length,
-                        itemBuilder: (context, index) {
-                          final order = completedOrders[index];
-                          return _buildHistoryCard(context, order);
-                        },
-                      ),
+                RefreshIndicator(
+                  color: AppColors.primary,
+                  backgroundColor: AppColors.surface,
+                  onRefresh: () async {
+                    await ref.read(ordersProvider.notifier).loadOrders();
+                  },
+                  child: completedOrders.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.6,
+                              child: _buildEmptyState(context, isActive: false),
+                            ),
+                          ],
+                        )
+                      : ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                          itemCount: completedOrders.length,
+                          itemBuilder: (context, index) {
+                            final order = completedOrders[index];
+                            return _buildHistoryCard(context, order);
+                          },
+                        ),
+                ),
               ],
             ),
           ),
