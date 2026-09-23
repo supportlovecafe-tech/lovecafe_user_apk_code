@@ -98,17 +98,15 @@ class SeatSelectionNotifier extends StateNotifier<SeatSelectionState> {
                 .select('allowed_payment_methods, is_active')
                 .eq('id', restoredState.hallId!)
                 .maybeSingle();
-            if (response != null) {
-              if (response['is_active'] == false) {
-                // Outlet is in Service Mode / Inactive, clear selection
-                await prefs.remove(_storageKey);
-                state = const SeatSelectionState();
-                return;
-              }
-              if (response['allowed_payment_methods'] != null) {
-                final methods = List<String>.from(response['allowed_payment_methods']);
-                restoredState = restoredState.copyWith(allowedPaymentMethods: methods);
-              }
+            if (response == null || response['is_active'] == false) {
+              // Outlet is in Service Mode / Inactive / removed, clear selection
+              await prefs.remove(_storageKey);
+              state = const SeatSelectionState();
+              return;
+            }
+            if (response['allowed_payment_methods'] != null) {
+              final methods = List<String>.from(response['allowed_payment_methods']);
+              restoredState = restoredState.copyWith(allowedPaymentMethods: methods);
             }
           } catch (e) {
             print('Error fetching updated payment methods on restore: $e');
