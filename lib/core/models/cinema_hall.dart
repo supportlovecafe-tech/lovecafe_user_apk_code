@@ -45,6 +45,8 @@ class CinemaHall {
   final String rating;
   final String feature;
   final String imageUrl;
+  final bool isActive;
+  final String status;
   final List<CinemaScreen> screens;
 
   const CinemaHall({
@@ -54,6 +56,8 @@ class CinemaHall {
     required this.rating,
     required this.feature,
     required this.imageUrl,
+    this.isActive = true,
+    this.status = 'ACTIVE',
     required this.screens,
   });
 
@@ -66,6 +70,8 @@ class CinemaHall {
     String? rating,
     String? feature,
     String? imageUrl,
+    bool? isActive,
+    String? status,
     List<CinemaScreen>? screens,
   }) {
     return CinemaHall(
@@ -75,6 +81,8 @@ class CinemaHall {
       rating: rating ?? this.rating,
       feature: feature ?? this.feature,
       imageUrl: imageUrl ?? this.imageUrl,
+      isActive: isActive ?? this.isActive,
+      status: status ?? this.status,
       screens: screens ?? this.screens,
     );
   }
@@ -87,6 +95,8 @@ class CinemaHall {
       'rating': rating,
       'feature': feature,
       'imageUrl': imageUrl,
+      'isActive': isActive,
+      'status': status,
       'screens': screens.map((screen) => screen.toMap()).toList(),
     };
   }
@@ -98,6 +108,8 @@ class CinemaHall {
       'rating': rating,
       'feature': feature,
       'image_url': imageUrl,
+      'is_active': isActive,
+      'status': status,
     };
   }
 
@@ -109,6 +121,8 @@ class CinemaHall {
       rating: map['rating']?.toString() ?? '4.5',
       feature: map['feature']?.toString() ?? 'Full Menu',
       imageUrl: map['image_url']?.toString() ?? map['imageUrl']?.toString() ?? '',
+      isActive: map['is_active'] is bool ? map['is_active'] as bool : true,
+      status: map['status']?.toString() ?? 'ACTIVE',
       screens: (map['screens'] as List<dynamic>? ?? [])
           .map((entry) => CinemaScreen.fromMap(Map<String, dynamic>.from(entry as Map)))
           .toList(),

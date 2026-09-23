@@ -95,10 +95,10 @@ class SeatSelectionNotifier extends StateNotifier<SeatSelectionState> {
           try {
             final response = await Supabase.instance.client
                 .from('cinemas')
-                .select('allowed_payment_methods, is_active')
+                .select('allowed_payment_methods, is_active, status')
                 .eq('id', restoredState.hallId!)
                 .maybeSingle();
-            if (response == null || response['is_active'] == false) {
+            if (response == null || response['is_active'] != true || response['status'] == 'INACTIVE') {
               // Outlet is in Service Mode / Inactive / removed, clear selection
               await prefs.remove(_storageKey);
               state = const SeatSelectionState();

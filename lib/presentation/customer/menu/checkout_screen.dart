@@ -14,6 +14,7 @@ import '../../../core/providers/loyalty_provider.dart';
 import '../../shared/widgets/primary_button.dart';
 import 'widgets/location_popup.dart';
 import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 import 'dart:convert';
 import '../../../core/services/backend_config.dart';
 
@@ -726,7 +727,13 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Payment Failed: $e'), backgroundColor: Colors.red));
+        String msg = e.toString();
+        if (e is DioException && e.response?.data is Map && e.response?.data['error'] != null) {
+          msg = e.response!.data['error'].toString();
+        } else if (msg.startsWith('Exception: ')) {
+          msg = msg.substring(11);
+        }
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Payment Failed: $msg'), backgroundColor: Colors.red));
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

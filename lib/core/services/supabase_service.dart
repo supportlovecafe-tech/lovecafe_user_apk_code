@@ -21,9 +21,10 @@ class SupabaseService {
     final response = await _client
         .from('cinemas')
         .select('*, screens(*)')
-        .neq('is_active', false);
+        .eq('is_active', true);
     
-    return (response as List).map((data) => CinemaHall.fromMap(data)).toList();
+    final halls = (response as List).map((data) => CinemaHall.fromMap(data)).toList();
+    return halls.where((hall) => hall.isActive && hall.status != 'INACTIVE').toList();
   }
 
   // --- Menu (Food Items) ---

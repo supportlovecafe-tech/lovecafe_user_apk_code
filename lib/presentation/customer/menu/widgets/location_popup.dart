@@ -28,6 +28,14 @@ class _LocationSelectionPopupState
   int _seatNumber = 9;
 
   @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      ref.read(cinemaHallsProvider.notifier).refreshHalls();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
