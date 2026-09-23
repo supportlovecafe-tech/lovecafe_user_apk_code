@@ -20,7 +20,8 @@ class SupabaseService {
   Future<List<CinemaHall>> fetchCinemas() async {
     final response = await _client
         .from('cinemas')
-        .select('*, screens(*)');
+        .select('*, screens(*)')
+        .neq('is_active', false);
     
     return (response as List).map((data) => CinemaHall.fromMap(data)).toList();
   }
@@ -213,22 +214,24 @@ class SupabaseService {
   }) async {
     if (customerId == null && customerPhone == null) return [];
     try {
-      final response = await _dio.get('/api/recommendations', queryParameters: {
-        'cinemaId': cinemaId,
-        'userId': customerId ?? 'GUEST',
-        'phone': customerPhone ?? 'NA',
-      });
-      final List data = response.data as List;
-      return data.map<ReorderSuggestion>((item) => ReorderSuggestion(
-        foodId: item['food_id']?.toString() ?? '',
-        name: item['food_name']?.toString() ?? '',
-        imageUrl: item['food_image']?.toString() ?? '',
-        price: (item['food_price'] as num?)?.toDouble() ?? 0,
-        category: item['food_category']?.toString() ?? '',
-        orderCount: item['count'] as int? ?? 1,
-      )).toList();
-    } catch (e) {
-      print('Error fetching recommendations via API, falling back to Supabase: $e');
+      try {
+        final response = await _dio.get('/api/recommendations', queryParameters: {
+          'cinemaId': cinemaId,
+          'userId': customerId ?? 'GUEST',
+          'phone': customerPhone ?? 'NA',
+        });
+        final List data = response.data as List;
+        return data.map<ReorderSuggestion>((item) => ReorderSuggestion(
+          foodId: item['food_id']?.toString() ?? '',
+          name: item['food_name']?.toString() ?? '',
+          imageUrl: item['food_image']?.toString() ?? '',
+          price: (item['food_price'] as num?)?.toDouble() ?? 0,
+          category: item['food_category']?.toString() ?? '',
+          orderCount: item['count'] as int? ?? 1,
+        )).toList();
+      } catch (e) {
+        print('Error fetching recommendations via API, falling back to Supabase: $e');
+      }
       // Fallback to existing direct query logic
       var query = _client
           .from('orders')
