@@ -129,7 +129,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     final availableCategoryNames = menuState.items.map((e) => e.category?.toUpperCase() ?? '').toSet();
     final hasCombos = comboState.items.isNotEmpty;
 
-    final flatCategories = [
+    final predefinedCategories = [
       'ALL',
       'COMBOS',
       'POPCORN',
@@ -137,6 +137,8 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
       'MILKSHAKE',
       'ICE_CREAM',
       'BEVERAGES',
+      'BOBA',
+      'NACHOS',
       'LOVE_SPECIAL',
       'SNACKS',
       'SANDWICH',
@@ -150,6 +152,11 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
       'CHINESE_PASTA',
       'PIZZA',
       'FUSION_FOODS',
+    ];
+
+    final flatCategories = [
+      ...predefinedCategories,
+      ...availableCategoryNames.where((c) => c.isNotEmpty && !predefinedCategories.contains(c)),
     ].where((cat) {
       if (cat == 'ALL') return true;
       if (cat == 'COMBOS') return hasCombos;
@@ -862,6 +869,8 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
       'MILKSHAKE': 'Milkshake',
       'ICE_CREAM': 'Ice Cream',
       'BEVERAGES': 'Beverages',
+      'BOBA': 'Boba',
+      'NACHOS': 'Nachos',
       'LOVE_SPECIAL': 'Love Special',
       'SNACKS': 'Snacks',
       'SANDWICH': 'Sandwich',
@@ -885,6 +894,8 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
       'MILKSHAKE': '🥤',
       'ICE_CREAM': '🍦',
       'BEVERAGES': '🧃',
+      'BOBA': '🧋',
+      'NACHOS': '🧀',
       'LOVE_SPECIAL': '❤️',
       'SNACKS': '🍟',
       'SANDWICH': '🥪',
@@ -904,6 +915,8 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
       'COMBOS': 'assets/images/categories/cat_combos.png',
       'POPCORN': 'assets/images/categories/cat_popcorn.png',
       'BEVERAGES': 'assets/images/categories/cat_beverage.png',
+      'BOBA': 'assets/images/categories/cat_beverage.png',
+      'NACHOS': 'assets/images/categories/cat_snacks.png',
       'SNACKS': 'assets/images/categories/cat_snacks.png',
       'PIZZA': 'assets/images/categories/cat_pizza.png',
       'BURGER': 'assets/images/categories/cat_burger.png',
@@ -1001,7 +1014,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    categoryLabels[cat] ?? cat,
+                    categoryLabels[cat] ?? (cat.replaceAll('_', ' ').toLowerCase().split(' ').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' ')),
                     textAlign: TextAlign.center,
                     style: AppTextStyles.labelSmall.copyWith(
                       color: isSelected 

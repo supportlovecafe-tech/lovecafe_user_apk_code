@@ -836,6 +836,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ('COMBOS', 'assets/images/categories/cat_combos.png', 'Combos'),
       ('POPCORN', 'assets/images/categories/cat_popcorn.png', 'Popcorn'),
       ('BEVERAGES', 'assets/images/categories/cat_beverage.png', 'Beverages'),
+      ('BOBA', 'assets/images/categories/cat_beverage.png', 'Boba'),
+      ('NACHOS', 'assets/images/categories/cat_snacks.png', 'Nachos'),
       ('SNACKS', 'assets/images/categories/cat_snacks.png', 'Snacks'),
       ('PIZZA', 'assets/images/categories/cat_pizza.png', 'Pizza'),
       ('BURGER', 'assets/images/categories/cat_burger.png', 'Burger'),
