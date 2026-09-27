@@ -74,11 +74,40 @@ class SeatSelectionNotifier extends StateNotifier<SeatSelectionState> {
   final Ref _ref;
   final String? _userId;
   String get _storageKey => 'ce_seat_selection_${_userId ?? 'guest'}';
+  RealtimeChannel? _seatCinemaChannel;
 
   SeatSelectionNotifier(this._ref, this._userId) : super(const SeatSelectionState()) {
     _restoreSelection();
+    _subscribeRealtime();
   }
 
+  void _subscribeRealtime() {
+    try {
+      _seatCinemaChannel = Supabase.instance.client
+          .channel('public:seat_cinema_sync')
+          .onPostgresChanges(
+            event: PostgresChangeEvent.all,
+            schema: 'public',
+            table: 'cinemas',
+            callback: (payload) {
+              final newRecord = payload.newRecord;
+              final oldRecord = payload.oldRecord;
+              final updatedId = newRecord['id']?.toString() ?? oldRecord['id']?.toString();
+              if (state.hallId != null && updatedId == state.hallId) {
+                final isActive = newRecord['is_active'] == true;
+                final status = newRecord['status']?.toString();
+                if (!isActive || status == 'INACTIVE') {
+                  print('Selected outlet ($updatedId) was inactivated in real-time. Clearing selection.');
+                  clearSelection();
+                }
+              }
+            },
+          )
+          .subscribe();
+    } catch (e) {
+      print('Failed to subscribe seat selection realtime: $e');
+    }
+  }
 
   Future<void> _persistSelection() async {
     final prefs = await SharedPreferences.getInstance();
@@ -109,7 +138,11 @@ class SeatSelectionNotifier extends StateNotifier<SeatSelectionState> {
               restoredState = restoredState.copyWith(allowedPaymentMethods: methods);
             }
           } catch (e) {
-            print('Error fetching updated payment methods on restore: $e');
+            print('Error fetching updated cinema status on restore: $e');
+            // Outlet could not be verified or is blocked by RLS because it is inactive
+            await prefs.remove(_storageKey);
+            state = const SeatSelectionState();
+            return;
           }
           state = restoredState;
           _ref.read(menuProvider.notifier).refreshMenu(state.hallId!);
@@ -119,6 +152,25 @@ class SeatSelectionNotifier extends StateNotifier<SeatSelectionState> {
       } catch (e) {
         print('Error restoring seat selection: $e');
       }
+    }
+  }
+
+  Future<bool> verifyCurrentSelectionActive() async {
+    if (state.hallId == null) return false;
+    try {
+      final response = await Supabase.instance.client
+          .from('cinemas')
+          .select('is_active, status')
+          .eq('id', state.hallId!)
+          .maybeSingle();
+      if (response == null || response['is_active'] != true || response['status'] == 'INACTIVE') {
+        clearSelection();
+        return false;
+      }
+      return true;
+    } catch (_) {
+      clearSelection();
+      return false;
     }
   }
 
@@ -159,6 +211,12 @@ class SeatSelectionNotifier extends StateNotifier<SeatSelectionState> {
     state = const SeatSelectionState();
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_storageKey);
+  }
+
+  @override
+  void dispose() {
+    _seatCinemaChannel?.unsubscribe();
+    super.dispose();
   }
 }
 

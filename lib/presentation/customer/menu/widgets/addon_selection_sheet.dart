@@ -1,11 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../../../core/models/addon_model.dart';
 import '../../../../core/models/food_item.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_text_styles.dart';
 
-/// Shows the Swiggy/Zomato-style add-on selection bottom sheet.
+/// Shows a POS-style add-on customisation bottom sheet.
 /// Returns List<SelectedAddon> when user confirms, or null if dismissed.
 Future<List<SelectedAddon>?> showAddonSelectionSheet({
   required BuildContext context,
@@ -15,10 +15,18 @@ Future<List<SelectedAddon>?> showAddonSelectionSheet({
   return showModalBottomSheet<List<SelectedAddon>>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     builder: (_) => AddonSelectionSheet(item: item, addonGroups: addonGroups),
   );
 }
+
+// ─── Gold accent colour matching the POS "--accent-gold" variable ───────────
+const Color _kGold = Color(0xFFFFC857);
+const Color _kPrimary = Color(0xFFFF2F92);
+const Color _kCardBg = Color(0xFF12121A);
+const Color _kGroupCardBg = Color(0xFF1A1A24);
+const Color _kGroupCardBorder = Color(0x0FFFFFFF);
 
 class AddonSelectionSheet extends StatefulWidget {
   final FoodItem item;
@@ -66,6 +74,8 @@ class _AddonSelectionSheetState extends State<AddonSelectionSheet> {
     return total;
   }
 
+  double get _total => widget.item.price + _addonTotal;
+
   List<SelectedAddon> _buildSelectedAddons() {
     return widget.addonGroups.map((group) {
       final sel = _selections[group.id] ?? {};
@@ -83,16 +93,19 @@ class _AddonSelectionSheetState extends State<AddonSelectionSheet> {
     setState(() {
       final sel = _selections[group.id] ??= {};
       if (group.isSingle) {
-        // Radio: always replace selection
-        sel
-          ..clear()
-          ..add(option.id);
+        // Radio: replace selection; allow deselect only for optional groups
+        if (sel.contains(option.id) && !group.isRequired) {
+          sel.clear();
+        } else {
+          sel
+            ..clear()
+            ..add(option.id);
+        }
       } else {
         // Checkbox: toggle
         if (sel.contains(option.id)) {
           sel.remove(option.id);
         } else {
-          // Respect max_selection
           if (group.maxSelection != null && sel.length >= group.maxSelection!) return;
           sel.add(option.id);
         }
@@ -102,203 +115,273 @@ class _AddonSelectionSheetState extends State<AddonSelectionSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final basePrice = widget.item.price;
-    final totalUnit = basePrice + _addonTotal;
-
     return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+      width: double.infinity,
+      decoration: const BoxDecoration(
+        color: _kCardBg,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border(
+          top: BorderSide(color: Color(0x1FFFFFFF), width: 1),
+          left: BorderSide(color: Color(0x1FFFFFFF), width: 1),
+          right: BorderSide(color: Color(0x1FFFFFFF), width: 1),
+        ),
       ),
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.9,
+        maxHeight: MediaQuery.of(context).size.height * 0.88,
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Handle bar
-          Container(
-            margin: const EdgeInsets.only(top: 12),
-            width: 40, height: 4,
-            decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+          // ── Drag handle ──────────────────────────────────────────────────
+          Center(
+            child: Container(
+              margin: const EdgeInsets.only(top: 10, bottom: 6),
+              width: 38,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
           ),
 
-          // Header
-          Padding(
-            padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-            child: Row(
+          // ── Header: item name + base price ──────────────────────────────
+          _buildHeader(),
+
+          // Divider
+          const Divider(color: Color(0x14FFFFFF), height: 1),
+
+          // ── Scrollable option groups ─────────────────────────────────────
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              physics: const ClampingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+              children: widget.addonGroups
+                  .map((group) => _buildGroupCard(group))
+                  .toList(),
+            ),
+          ),
+
+          // ── Sticky footer: price + Cancel + ADD TO ORDER ─────────────────
+          _buildFooter(),
+        ],
+      ),
+    );
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // Header
+  // ───────────────────────────────────────────────────────────────────────────
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 8, 16, 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Item image
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Image.network(
-                    widget.item.imageUrl,
-                    width: 64, height: 64, fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      width: 64, height: 64, color: AppColors.surface,
-                      child: const Icon(Icons.fastfood_rounded, color: Colors.white24, size: 28),
-                    ),
+                Text(
+                  'Customize ${widget.item.name}',
+                  style: AppTextStyles.headingMedium.copyWith(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.3,
                   ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(widget.item.name, style: AppTextStyles.headingMedium, maxLines: 2, overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 4),
-                      Text('Customise your order', style: AppTextStyles.bodySmall.copyWith(color: AppColors.textDisabled)),
-                    ],
+                const SizedBox(height: 3),
+                Text(
+                  'Base: ₹${widget.item.price.toStringAsFixed(0)}',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: _kGold,
                   ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.of(context).pop(null),
-                  icon: const Icon(Icons.close_rounded, color: Colors.white54),
                 ),
               ],
             ),
           ),
-
-          const Divider(color: Colors.white12, height: 28, indent: 24, endIndent: 24),
-
-          // Addon groups scrollable
-          Flexible(
-            child: ListView(
-              shrinkWrap: true,
-              padding: const EdgeInsets.only(bottom: 8),
-              children: widget.addonGroups.map((group) => _buildGroupSection(group)).toList(),
+          // Close button
+          Material(
+            color: Colors.white.withValues(alpha: 0.08),
+            shape: const CircleBorder(),
+            child: InkWell(
+              customBorder: const CircleBorder(),
+              onTap: () => Navigator.of(context).pop(null),
+              child: const SizedBox(
+                width: 34,
+                height: 34,
+                child: Icon(Icons.close_rounded, color: Colors.white70, size: 18),
+              ),
             ),
           ),
-
-          // Bottom bar
-          _buildBottomBar(basePrice, _addonTotal, totalUnit),
         ],
       ),
     );
   }
 
-  Widget _buildGroupSection(AddonGroup group) {
+  // ───────────────────────────────────────────────────────────────────────────
+  // Group card  (matches POS: rounded card, group badge, option rows)
+  // ───────────────────────────────────────────────────────────────────────────
+  Widget _buildGroupCard(AddonGroup group) {
     final sel = _selections[group.id] ?? {};
-    final isSatisfied = !group.isRequired || sel.isNotEmpty;
+    final isSingle = group.isSingle;
+    final isRequired = group.isRequired;
+    final isSatisfied = !isRequired || sel.isNotEmpty;
+
+    // Badge label
+    final String badgeLabel = isRequired
+        ? 'Required (Pick 1)'
+        : (isSingle ? 'Optional (Pick 1)' : 'Optional (Multiple)');
+    final Color badgeBg = isRequired
+        ? _kPrimary.withValues(alpha: 0.15)
+        : Colors.white.withValues(alpha: 0.06);
+    final Color badgeColor = isRequired ? _kPrimary : const Color(0xFF888899);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Group header
-          Row(
-            children: [
-              Expanded(
-                child: Text(group.displayName, style: AppTextStyles.titleMedium.copyWith(fontWeight: FontWeight.w800)),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: group.isRequired
-                      ? (isSatisfied ? Colors.green.withOpacity(0.15) : Colors.red.withOpacity(0.15))
-                      : Colors.white12,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: group.isRequired
-                        ? (isSatisfied ? Colors.green.withOpacity(0.4) : Colors.red.withOpacity(0.4))
-                        : Colors.white24,
-                  ),
-                ),
-                child: Text(
-                  group.isRequired ? (isSatisfied ? 'Done' : 'Required') : 'Optional',
-                  style: TextStyle(
-                    fontSize: 10, fontWeight: FontWeight.w800,
-                    color: group.isRequired
-                        ? (isSatisfied ? Colors.green : Colors.red[300])
-                        : Colors.white54,
-                  ),
-                ),
-              ),
-            ],
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _kGroupCardBg,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isRequired && !isSatisfied
+                ? Colors.red.withValues(alpha: 0.3)
+                : _kGroupCardBorder,
+            width: 1,
           ),
-          if (group.isMulti)
-            Padding(
-              padding: const EdgeInsets.only(top: 2),
-              child: Text(
-                group.maxSelection != null
-                    ? 'Select up to '
-                    : 'Select any',
-                style: AppTextStyles.bodySmall.copyWith(color: AppColors.textDisabled, fontSize: 11),
-              ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Group title row ──────────────────────────────────────────
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    group.displayName,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: badgeBg,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    badgeLabel,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: badgeColor,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
 
-          // Options
-          ...group.options.map((option) => _buildOptionTile(group, option, sel)),
-          const SizedBox(height: 4),
-          Divider(color: Colors.white.withOpacity(0.06)),
-        ],
+            // ── Option rows ──────────────────────────────────────────────
+            ...group.options.map((opt) => _buildOptionRow(group, opt, sel, isSingle)),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildOptionTile(AddonGroup group, AddonOption option, Set<String> sel) {
+  // ───────────────────────────────────────────────────────────────────────────
+  // Single option row  (POS style: radio dot + name + gold price)
+  // ───────────────────────────────────────────────────────────────────────────
+  Widget _buildOptionRow(AddonGroup group, AddonOption option, Set<String> sel, bool isSingle) {
     final isSelected = sel.contains(option.id);
-    return InkWell(
+
+    return GestureDetector(
       onTap: () => _toggleOption(group, option),
-      borderRadius: BorderRadius.circular(12),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.12) : Colors.white.withOpacity(0.03),
+          color: isSelected
+              ? _kPrimary.withValues(alpha: 0.10)
+              : Colors.white.withValues(alpha: 0.03),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: isSelected ? AppColors.primary.withOpacity(0.5) : Colors.transparent,
+            color: isSelected
+                ? _kPrimary.withValues(alpha: 0.6)
+                : Colors.white.withValues(alpha: 0.06),
+            width: isSelected ? 1.5 : 1,
           ),
         ),
         child: Row(
           children: [
-            // Radio / Checkbox visual
+            // Radio / Checkbox indicator
             AnimatedContainer(
               duration: const Duration(milliseconds: 150),
-              width: 20, height: 20,
+              width: 18,
+              height: 18,
               decoration: BoxDecoration(
-                shape: group.isSingle ? BoxShape.circle : BoxShape.rectangle,
-                borderRadius: group.isMulti ? BorderRadius.circular(5) : null,
-                color: isSelected ? AppColors.primary : Colors.transparent,
+                shape: isSingle ? BoxShape.circle : BoxShape.rectangle,
+                borderRadius: isSingle ? null : BorderRadius.circular(4),
+                color: isSelected ? _kPrimary : Colors.transparent,
                 border: Border.all(
-                  color: isSelected ? AppColors.primary : Colors.white38,
+                  color: isSelected ? _kPrimary : Colors.white38,
                   width: 2,
                 ),
               ),
               child: isSelected
-                  ? Icon(
-                      group.isSingle ? Icons.circle : Icons.check_rounded,
-                      size: group.isSingle ? 8 : 14,
-                      color: Colors.white,
+                  ? Center(
+                      child: Container(
+                        width: isSingle ? 6 : 10,
+                        height: isSingle ? 6 : 10,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: isSingle ? null : BorderRadius.circular(2),
+                          shape: isSingle ? BoxShape.circle : BoxShape.rectangle,
+                        ),
+                      ),
                     )
                   : null,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
 
             // Option name
             Expanded(
               child: Text(
                 option.name,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: isSelected ? Colors.white : AppColors.textSecondary,
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  color: isSelected ? Colors.white : const Color(0xFF888899),
                 ),
               ),
             ),
 
-            // Price
+            // Price in gold when selected, muted when not
             Text(
-              option.price == 0 ? 'FREE' : '+₹',
+              option.price == 0
+                  ? 'Free'
+                  : '+₹${option.price.toStringAsFixed(0)}',
               style: TextStyle(
-                fontSize: 13, fontWeight: FontWeight.w700,
-                color: option.price == 0
-                    ? Colors.green[400]
-                    : (isSelected ? AppColors.primary : AppColors.textSecondary),
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: isSelected
+                    ? _kGold
+                    : (option.price == 0
+                        ? AppColors.success
+                        : const Color(0xFF888899)),
               ),
             ),
           ],
@@ -307,62 +390,106 @@ class _AddonSelectionSheetState extends State<AddonSelectionSheet> {
     );
   }
 
-  Widget _buildBottomBar(double base, double addonTotal, double total) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).padding.bottom + 16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceElevated,
-        border: Border(top: BorderSide(color: Colors.white.withOpacity(0.07))),
-      ),
-      child: Row(
-        children: [
-          // Price breakdown
-          Expanded(
-            child: Column(
+  // ───────────────────────────────────────────────────────────────────────────
+  // Footer: matches POS — "Total Item Price" + gold amount + Cancel + Add btn
+  // ───────────────────────────────────────────────────────────────────────────
+  Widget _buildFooter() {
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.30),
+          border: const Border(
+            top: BorderSide(color: Color(0x14FFFFFF), width: 1),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            // ── Price column ───────────────────────────────────────────
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  '₹ / item',
-                  style: AppTextStyles.priceLarge,
-                ),
-                if (addonTotal > 0)
-                  Text(
-                    'Base ₹ + addons ₹',
-                    style: AppTextStyles.bodySmall.copyWith(color: AppColors.textDisabled, fontSize: 11),
+                const Text(
+                  'Total Item Price',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF888899),
+                    fontWeight: FontWeight.w500,
                   ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 16),
-
-          // Add to Cart button
-          ElevatedButton(
-            onPressed: _canAdd
-                ? () => Navigator.of(context).pop(_buildSelectedAddons())
-                : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _canAdd ? AppColors.primary : Colors.white12,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: Colors.white12,
-              disabledForegroundColor: Colors.white38,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-              elevation: _canAdd ? 4 : 0,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.add_shopping_cart_rounded, size: 18),
-                const SizedBox(width: 8),
+                ),
+                const SizedBox(height: 2),
                 Text(
-                  _canAdd ? 'Add to Cart' : 'Select required',
-                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                  '₹${_total.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w900,
+                    color: _kGold,
+                    height: 1.1,
+                  ),
                 ),
               ],
             ),
-          ),
-        ],
+
+            const SizedBox(width: 16),
+
+            // ── Cancel + Add to Order ──────────────────────────────────
+            Expanded(
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  // Cancel
+                  Material(
+                    color: Colors.white.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: () => Navigator.of(context).pop(null),
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                        child: Text(
+                          'Cancel',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+
+                  // ADD TO ORDER
+                  Material(
+                    color: _canAdd ? _kPrimary : Colors.white12,
+                    borderRadius: BorderRadius.circular(12),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(12),
+                      onTap: _canAdd
+                          ? () => Navigator.of(context).pop(_buildSelectedAddons())
+                          : null,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        child: Text(
+                          _canAdd ? 'ADD TO ORDER' : 'SELECT REQUIRED',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                            color: _canAdd ? Colors.white : Colors.white38,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -44,7 +44,9 @@ ios/Flutter/flutter_export_environment.sh
 
 # Large files and temporary clones
 *.apk
+*.aab
 *.zip
+verbose_build.txt
 test_clone/
 node_modules/
 .env*

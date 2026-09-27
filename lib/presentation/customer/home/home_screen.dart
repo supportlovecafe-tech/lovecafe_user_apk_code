@@ -45,15 +45,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     _pageController = PageController(initialPage: 0, viewportFraction: 0.92);
     _startCarouselTimer();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final selectionNotifier = ref.read(seatSelectionProvider.notifier);
       final selection = ref.read(seatSelectionProvider);
-      if (!selection.isComplete && !_hasShownLocationPopup) {
+      if (selection.isComplete) {
+        final isActive = await selectionNotifier.verifyCurrentSelectionActive();
+        if (!isActive) {
+          if (mounted && !_hasShownLocationPopup) {
+            _hasShownLocationPopup = true;
+            _showLocationSelection(context);
+          }
+          return;
+        }
+        ref.read(menuProvider.notifier).refreshMenu(selection.hallId!);
+      } else if (!_hasShownLocationPopup) {
         _hasShownLocationPopup = true;
         _showLocationSelection(context);
-        return;
-      }
-      if (selection.isComplete) {
-        ref.read(menuProvider.notifier).refreshMenu(selection.hallId!);
       }
     });
   }
@@ -836,8 +843,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ('COMBOS', 'assets/images/categories/cat_combos.png', 'Combos'),
       ('POPCORN', 'assets/images/categories/cat_popcorn.png', 'Popcorn'),
       ('BEVERAGES', 'assets/images/categories/cat_beverage.png', 'Beverages'),
-      ('BOBA', 'assets/images/categories/cat_beverage.png', 'Boba'),
-      ('NACHOS', 'assets/images/categories/cat_snacks.png', 'Nachos'),
+      ('BOBA', 'assets/images/categories/cat_boba.png', 'Boba'),
+      ('NACHOS', 'assets/images/categories/cat_nachos.png', 'Nachos'),
       ('SNACKS', 'assets/images/categories/cat_snacks.png', 'Snacks'),
       ('PIZZA', 'assets/images/categories/cat_pizza.png', 'Pizza'),
       ('BURGER', 'assets/images/categories/cat_burger.png', 'Burger'),
@@ -852,7 +859,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ('MOMO', 'assets/images/categories/cat_momo.png', 'Momo'),
       ('CHINESE_RICE_COMBO', 'assets/images/categories/cat_chinese_rice_combo.png', 'Chinese Combo'),
       ('CHINESE_NOODLES_COMBO', 'assets/images/categories/cat_chinese_rice_combo.png', 'Noodles Combo'),
-      ('CHINESE_PASTA', 'assets/images/categories/cat_pizza.png', 'Pasta'),
+      ('CHINESE_PASTA', 'assets/images/categories/cat_pasta.png', 'Pasta'),
+      ('PASTA', 'assets/images/categories/cat_pasta.png', 'Pasta'),
       ('FUSION_FOODS', 'assets/images/categories/cat_fusion.png', 'Fusion Foods'),
     ];
 

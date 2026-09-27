@@ -882,6 +882,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
       'CHINESE_RICE_COMBO': 'Chinese Combo',
       'CHINESE_NOODLES_COMBO': 'Noodles Combo',
       'CHINESE_PASTA': 'Pasta',
+      'PASTA': 'Pasta',
       'PIZZA': 'Pizza',
       'FUSION_FOODS': 'Fusion Foods',
     };
@@ -907,6 +908,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
       'CHINESE_RICE_COMBO': '🍚',
       'CHINESE_NOODLES_COMBO': '🍜',
       'CHINESE_PASTA': '🍝',
+      'PASTA': '🍝',
       'PIZZA': '🍕',
       'FUSION_FOODS': '🌟',
     };
@@ -915,8 +917,8 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
       'COMBOS': 'assets/images/categories/cat_combos.png',
       'POPCORN': 'assets/images/categories/cat_popcorn.png',
       'BEVERAGES': 'assets/images/categories/cat_beverage.png',
-      'BOBA': 'assets/images/categories/cat_beverage.png',
-      'NACHOS': 'assets/images/categories/cat_snacks.png',
+      'BOBA': 'assets/images/categories/cat_boba.png',
+      'NACHOS': 'assets/images/categories/cat_nachos.png',
       'SNACKS': 'assets/images/categories/cat_snacks.png',
       'PIZZA': 'assets/images/categories/cat_pizza.png',
       'BURGER': 'assets/images/categories/cat_burger.png',
@@ -931,7 +933,8 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
       'MOMO': 'assets/images/categories/cat_momo.png',
       'CHINESE_RICE_COMBO': 'assets/images/categories/cat_chinese_rice_combo.png',
       'CHINESE_NOODLES_COMBO': 'assets/images/categories/cat_chinese_rice_combo.png',
-      'CHINESE_PASTA': 'assets/images/categories/cat_pizza.png',
+      'CHINESE_PASTA': 'assets/images/categories/cat_pasta.png',
+      'PASTA': 'assets/images/categories/cat_pasta.png',
       'FUSION_FOODS': 'assets/images/categories/cat_fusion.png',
     };
 
