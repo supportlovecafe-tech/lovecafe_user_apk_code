@@ -479,7 +479,7 @@ class _OrdersScreenState extends ConsumerState<OrdersScreen> with SingleTickerPr
               ),
               const SizedBox(height: 4),
               Text(
-                DateFormat('MMM dd, yyyy • hh:mm a').format(order.timestamp),
+                DateFormat('MMM dd, yyyy • hh:mm a').format(order.timestamp.toUtc().add(const Duration(hours: 5, minutes: 30))),
                 style: AppTextStyles.bodySmall.copyWith(color: AppColors.textDisabled),
               ),
             ],

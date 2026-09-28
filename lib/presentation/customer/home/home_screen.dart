@@ -230,7 +230,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       ),
                                     ),
                                     Text(
-                                      DateFormat('HH:mm').format(n.timestamp),
+                                      DateFormat('HH:mm').format(n.timestamp.toUtc().add(const Duration(hours: 5, minutes: 30))),
                                       style: AppTextStyles.labelSmall,
                                     ),
                                   ],

@@ -282,7 +282,7 @@ class _TransactionTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  DateFormat('dd MMM yyyy • hh:mm a').format(tx.createdAt),
+                  DateFormat('dd MMM yyyy • hh:mm a').format(tx.createdAt.toUtc().add(const Duration(hours: 5, minutes: 30))),
                   style: AppTextStyles.bodySmall,
                 ),
               ],
