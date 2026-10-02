@@ -86,7 +86,8 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
       final query = _searchQuery.toLowerCase();
       result = result.where((food) {
         return food.name.toLowerCase().contains(query) ||
-            food.description.toLowerCase().contains(query);
+            food.description.toLowerCase().contains(query) ||
+            food.category.toLowerCase().contains(query);
       }).toList();
     }
 
@@ -107,7 +108,8 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
       final query = _searchQuery.toLowerCase();
       result = result.where((c) =>
           c.name.toLowerCase().contains(query) ||
-          c.description.toLowerCase().contains(query)).toList();
+          c.description.toLowerCase().contains(query) ||
+          c.category.toLowerCase().contains(query)).toList();
     }
     if (_showVegOnly) {
       result = result.where((c) => c.isVeg).toList();
@@ -1017,7 +1019,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    categoryLabels[cat] ?? (cat.replaceAll('_', ' ').toLowerCase().split(' ').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' ')),
+                    (categoryLabels[cat] ?? (cat.replaceAll('_', ' ').toLowerCase().split(' ').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' '))).toUpperCase(),
                     textAlign: TextAlign.center,
                     style: AppTextStyles.labelSmall.copyWith(
                       color: isSelected 

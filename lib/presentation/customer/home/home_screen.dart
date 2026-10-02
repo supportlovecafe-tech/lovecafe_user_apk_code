@@ -916,7 +916,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      label,
+                      label.toUpperCase(),
                       textAlign: TextAlign.center,
                       style: AppTextStyles.labelMedium.copyWith(
                         color: AppColors.textPrimary,
